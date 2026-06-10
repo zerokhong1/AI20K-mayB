@@ -6,6 +6,43 @@
 
 ---
 
+## §0 — Quy tắc bắt buộc cho Claude Code (Máy B)
+
+> Các quy tắc dưới đây là **bắt buộc** — không phải gợi ý. Vi phạm = báo cáo bị trả lại.
+
+### Q1 — Không output = không tính báo cáo
+
+Mỗi lần báo cáo **phải có raw output thật** (terminal paste, không tóm tắt bằng lời):
+- `git push` → dán đúng dòng output của lệnh.
+- Verify sequence → dán đúng kết quả `gz topic -l`, `ros2 topic list`, `ros2 run tf2_tools view_frames`, v.v.
+- Bất kỳ DoD nào trong §4 `PLAN_may_B_sensors.md` → dán output, không viết "đã chạy OK".
+
+**Không có output = chưa chạy = báo cáo bị trả lại ngay.**
+
+### Q2 — Thứ tự ưu tiên lệnh (0)–(4) theo D1
+
+Khi nhận lệnh có đánh số (0)–(4), thực hiện **đúng thứ tự**, không nhảy cóc:
+
+| # | Việc | Điều kiện xong |
+|---|------|----------------|
+| 0 | `git add → commit → push` | output push thật |
+| 1 | Verify sequence §6 (`PLAN_may_B_sensors.md`) | raw terminal output |
+| 2 | Script so pose detector vs ground-truth (≤ 0.1 m) | script chạy pass |
+| 3 | Log đủ 3 tầng fallback + ghi active path vào trace | log xuất hiện trong output |
+| 4 | Dừng polish perception — P0.1 Bảng A ưu tiên | không thêm feature mới |
+
+### Q3 — K hardcode là fail-to, không phải fallback im lặng
+
+`ARMBenchDetector._to_map_pose` **không được dùng hardcoded intrinsics** khi thiếu `CameraInfo`.
+Hành vi đúng: `return None` (skip detection) + log `ERROR` một lần.
+Lý do: hardcoded K → detection sai pose → eval sai → không phát hiện được ngay.
+
+### Q4 — Disclosure bắt buộc khi dùng ground-truth
+
+Mỗi chỗ dùng ground-truth thay sensor thật: ghi rõ `source` trong JSON output và trong báo cáo. Không để `"source": "armbench_depth"` khi thực tế đang dùng `gz_gt`.
+
+---
+
 ## ⚠️ Điểm mấu chốt
 
 **AWS warehouse world + Gazebo + ARMBench chạy HẾT ở Máy B — không phải Máy A.**

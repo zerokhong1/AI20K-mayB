@@ -8,6 +8,8 @@
 > 3. Khi xong, **điền §6 (bảng báo cáo)** rồi tóm tắt lại — không cần viết lại file này.
 >
 > Quy ước trạng thái để báo cáo: `☐ chưa` · `◐ đang` · `✅ xong` · `⊘ N/A (bỏ)` · `⚠ blocked`.
+>
+> **⚠️ Quy tắc bắt buộc (Q1–Q4) nằm ở `PLAN_may_B_gazebo.md §0` — đọc trước khi báo cáo bất kỳ bước nào.**
 
 ---
 

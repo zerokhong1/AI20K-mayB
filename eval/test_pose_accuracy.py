@@ -185,7 +185,9 @@ CASES: list[Case] = [
          gt_x=2.0, gt_y=1.0,
          robot_x=0.5, robot_y=0.5, robot_yaw=math.pi/4,
          tf_mode="manual"),
-    Case("no_camera_info_uses_default",
+    # Q3: no CameraInfo → fail-to (return None), not hardcoded fallback.
+    # This case verifies the node correctly refuses to detect rather than guessing.
+    Case("no_camera_info_fail_to",
          gt_x=-0.28, gt_y=-9.48,
          robot_x=-0.28, robot_y=-11.48, robot_yaw=math.pi/2,
          tf_mode="tf2a", use_camera_info=False),
@@ -222,6 +224,7 @@ def run_case(case: Case, verbose: bool) -> dict:
     class _SilentLogger:
         warnings = []
         def warn(self, m):  self.warnings.append(m)
+        def error(self, m): self.warnings.append(f"ERROR: {m}")
         def debug(self, m): pass
 
     logger = _SilentLogger()
@@ -236,11 +239,18 @@ def run_case(case: Case, verbose: bool) -> dict:
         robot_yaw=case.robot_yaw,
     )
 
+    # Q3 case: no_camera_info_fail_to expects None (correct failure, not wrong detection)
     if result is None:
-        err = f"FAIL: _to_map_pose returned None"
-        passed = False
-        det_x = det_y = float("nan")
-        path_label = "none"
+        if not case.use_camera_info:
+            passed = True
+            err = "None as expected (fail-to on missing CameraInfo)"
+            det_x = det_y = float("nan")
+            path_label = "fail_to"
+        else:
+            err = "FAIL: _to_map_pose returned None unexpectedly"
+            passed = False
+            det_x = det_y = float("nan")
+            path_label = "none"
     else:
         pose, path_label = result
         det_x, det_y = pose.x, pose.y

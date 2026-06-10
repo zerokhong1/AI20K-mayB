@@ -265,23 +265,20 @@ class ARMBenchDetector:
             return None
 
         # ── Step 1: unproject ── #
-        if camera_info is not None:
-            fx = camera_info.k[0];  fy = camera_info.k[4]
-            cx = camera_info.k[2];  cy = camera_info.k[5]
-            intrinsic_source = "camera_info"
-        else:
-            # LOUD: hardcoded defaults are wrong until first CameraInfo arrives.
-            # Any detection on this path must be treated as approximate.
+        # Q3 (PLAN_may_B_gazebo.md §0): no CameraInfo = fail-to, not silent fallback.
+        # return None skips this detection; ERROR fires once so it surfaces immediately.
+        if camera_info is None:
             if self._logger:
-                self._logger.warn(
-                    "perception [FALLBACK-1]: no CameraInfo received yet — "
-                    "using hardcoded defaults (fx=554, 640×480). "
-                    "Detections on this path are approximate until "
-                    "/camera/depth/image_raw/camera_info is live."
+                self._logger.error(
+                    "perception [FAIL-1]: CameraInfo not yet received — "
+                    "skipping detection (no intrinsics). "
+                    "Check /camera/depth/image_raw/camera_info is being published "
+                    "and bridge is running."
                 )
-            fx, fy = self._FX_DEFAULT, self._FY_DEFAULT
-            cx, cy = self._CX_DEFAULT, self._CY_DEFAULT
-            intrinsic_source = "hardcoded_default"
+            return None
+        fx = camera_info.k[0];  fy = camera_info.k[4]
+        cx = camera_info.k[2];  cy = camera_info.k[5]
+        intrinsic_source = "camera_info"
 
         # 3D point in camera_optical_link: z-forward, x-right, y-down
         x_opt = (cx_px - cx) * depth_m / fx
