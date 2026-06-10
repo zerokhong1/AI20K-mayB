@@ -216,7 +216,7 @@ class ARMBenchDetector:
         raw = self._run_model(depth_img)
         detections: dict[str, dict] = {}
         for det in raw:
-            map_pose = self._to_map_pose(
+            result = self._to_map_pose(
                 det["cx_px"], det["cy_px"], det["depth_m"],
                 camera_info=camera_info,
                 tf_buffer=tf_buffer,
@@ -224,12 +224,14 @@ class ARMBenchDetector:
                 robot_pose=robot_pose,
                 robot_yaw=robot_yaw,
             )
-            if map_pose is not None:
+            if result is not None:
+                map_pose, path_label = result
                 detections[det["class"]] = {
                     "x": round(map_pose.x, 3),
                     "y": round(map_pose.y, 3),
                     "yaw": 0.0,
                     "source": "armbench_depth",
+                    "perception_path": path_label,
                 }
         return detections
 
@@ -243,11 +245,14 @@ class ARMBenchDetector:
         stamp,
         robot_pose: Optional[Pose2D],
         robot_yaw: float,
-    ) -> Optional[Pose2D]:
+    ) -> "Optional[tuple[Pose2D, str]]":
         """
-        Back-project (pixel, depth) → map-frame Pose2D.
+        Back-project (pixel, depth) → (map-frame Pose2D, path_label).
 
-        Step 1 — unproject with CameraInfo.K intrinsics (fallback: SDF defaults).
+        path_label encodes which fallback tier was used — written into the
+        detected_objects JSON so eval disclosure is accurate per detection.
+
+        Step 1 — unproject with CameraInfo.K intrinsics (fallback: SDF defaults, LOUD).
                   Result is in camera_optical_link frame (z-fwd, x-right, y-down).
 
         Step 2 — transform to map:
@@ -263,9 +268,20 @@ class ARMBenchDetector:
         if camera_info is not None:
             fx = camera_info.k[0];  fy = camera_info.k[4]
             cx = camera_info.k[2];  cy = camera_info.k[5]
+            intrinsic_source = "camera_info"
         else:
+            # LOUD: hardcoded defaults are wrong until first CameraInfo arrives.
+            # Any detection on this path must be treated as approximate.
+            if self._logger:
+                self._logger.warn(
+                    "perception [FALLBACK-1]: no CameraInfo received yet — "
+                    "using hardcoded defaults (fx=554, 640×480). "
+                    "Detections on this path are approximate until "
+                    "/camera/depth/image_raw/camera_info is live."
+                )
             fx, fy = self._FX_DEFAULT, self._FY_DEFAULT
             cx, cy = self._CX_DEFAULT, self._CY_DEFAULT
+            intrinsic_source = "hardcoded_default"
 
         # 3D point in camera_optical_link: z-forward, x-right, y-down
         x_opt = (cx_px - cx) * depth_m / fx
@@ -274,7 +290,7 @@ class ARMBenchDetector:
 
         # ── Step 2a + 2b: TF2 (stamp first, then latest) ── #
         if tf_buffer is not None:
-            for query_time in (stamp, rclpy.time.Time()):
+            for label, query_time in (("stamp", stamp), ("latest", rclpy.time.Time())):
                 if query_time is None:
                     continue
                 try:
@@ -285,8 +301,19 @@ class ARMBenchDetector:
                         rclpy.duration.Duration(seconds=0.05),
                     )
                     x_map, y_map, _ = _apply_tf(t, x_opt, y_opt, z_opt)
-                    return Pose2D(x_map, y_map, 0.0)
-                except Exception:
+                    tf_label = "tf2a" if label == "stamp" else "tf2b"
+                    if self._logger:
+                        self._logger.debug(
+                            f"perception [{tf_label}]: camera_optical_link→map via {label} OK  "
+                            f"intrinsic={intrinsic_source}"
+                        )
+                    return Pose2D(x_map, y_map, 0.0), f"{tf_label}/{intrinsic_source}"
+                except Exception as e:
+                    if self._logger:
+                        self._logger.debug(
+                            f"perception [FALLBACK-2{('a' if label == 'stamp' else 'b')}]: "
+                            f"TF {label} failed ({e!r})"
+                        )
                     continue
             # Both TF attempts failed — fall through to manual
 
@@ -294,7 +321,7 @@ class ARMBenchDetector:
         if not self._fallback_warned:
             if self._logger:
                 self._logger.warn(
-                    "perception: TF camera_optical_link→map failed on both stamp "
+                    "perception [FALLBACK-2c]: TF camera_optical_link→map failed on both stamp "
                     "and Time() — using manual rotation fallback. "
                     "Check use_sim_time=true and TF chain. "
                     "Disclosure: eval results on this path are approximate "
@@ -316,7 +343,7 @@ class ARMBenchDetector:
         sin_y = math.sin(robot_yaw)
         x_map = robot_pose.x + cos_y * x_base - sin_y * y_base
         y_map = robot_pose.y + sin_y * x_base + cos_y * y_base
-        return Pose2D(x_map, y_map, 0.0)
+        return Pose2D(x_map, y_map, 0.0), f"manual/{intrinsic_source}"
 
 
 # ──────────────────────────────────────────────────────────────────────────── #

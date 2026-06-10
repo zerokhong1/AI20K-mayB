@@ -2,10 +2,13 @@
 
 ## Bảng A — 2D Flat World (kết quả chính)
 
-> Xem `PLAN_may_A_web2d.md` và kết quả eval Máy A để biết chi tiết.
-> Bảng A là phạm vi đo **chính thức** của dự án.
+> Backend: `Flat2DBackend` · agent: scripted (reference path) · Run: 2026-06-10T16:43:44+00:00
 
-*(Chưa có kết quả trong file này — điền từ Máy A)*
+| Task ID | goal_text (tóm tắt) | Success | Steps | Time (s) | Dist→dropoff_a (m) | locate_object source |
+|---------|---------------------|---------|-------|----------|--------------------|----------------------|
+| m1 | Retrieve the pallet_jack from its storage location and … | ✓ | 9 | 0.0 | 0.000 | gt_registry |
+| m2 | The pallet_jack must be transported to the central deli… | ✓ | 9 | 0.0 | 0.000 | gt_registry |
+| m3 | Lấy pallet_jack từ vị trí lưu trữ (gần tọa độ -0.28, -9… | ✓ | 9 | 0.0 | 0.000 | gt_registry |
 
 ---
 

@@ -1,0 +1,133 @@
+{
+  "run_id": "20260610T164344",
+  "task_id": "m2",
+  "backend": "flat2d",
+  "goal_text": "The pallet_jack must be transported to the central delivery point. Navigate to the pallet_jack near (-0.28, -9.48), pick it up, and bring it to dropoff_a at (0.0, 0.0).",
+  "run_ts": "2026-06-10T16:43:44+00:00",
+  "metrics": {
+    "steps": 9,
+    "done_called": true,
+    "oracle": {
+      "backend": "flat2d",
+      "robot_pose": "(0.00, 0.00, yaw=0.00)",
+      "pallet_pos": "(0.00, 0.00)",
+      "pallet_to_dropoff_a_m": 0.0,
+      "carrying": null,
+      "task_complete": true
+    }
+  },
+  "trace": [
+    {
+      "step": 1,
+      "tool": "perceive",
+      "input": {},
+      "output": {
+        "robot_pose": "(3.45, 2.15, yaw=0.00)",
+        "objects": {
+          "pallet_jack": "(-0.28, -9.48, yaw=0.00)",
+          "clutter_c_027": "(3.32, 3.82, yaw=0.00)",
+          "clutter_c_028": "(5.54, 3.82, yaw=0.00)",
+          "clutter_c_029": "(5.38, 6.14, yaw=0.00)",
+          "clutter_c_030": "(3.24, 6.14, yaw=0.00)",
+          "clutter_d_005": "(-1.63, -7.81, yaw=0.00)",
+          "dropoff_a": "(0.00, 0.00, yaw=0.00)",
+          "dropoff_b": "(3.45, 2.15, yaw=0.00)"
+        },
+        "map_info": "flat2d_aws_small_warehouse"
+      }
+    },
+    {
+      "step": 2,
+      "tool": "locate_object",
+      "input": {
+        "name": "pallet_jack"
+      },
+      "output": {
+        "x": -0.28,
+        "y": -9.48,
+        "yaw": 0.0
+      }
+    },
+    {
+      "step": 3,
+      "tool": "move_to",
+      "input": {
+        "x": -0.28,
+        "y": -9.48,
+        "yaw": 0.0
+      },
+      "output": {
+        "success": true
+      }
+    },
+    {
+      "step": 4,
+      "tool": "pick",
+      "input": {
+        "object_name": "pallet_jack"
+      },
+      "output": {
+        "success": true
+      }
+    },
+    {
+      "step": 5,
+      "tool": "locate_object",
+      "input": {
+        "name": "dropoff_a"
+      },
+      "output": {
+        "x": 0.0,
+        "y": 0.0,
+        "yaw": 0.0
+      }
+    },
+    {
+      "step": 6,
+      "tool": "move_to",
+      "input": {
+        "x": 0.0,
+        "y": 0.0,
+        "yaw": 0.0
+      },
+      "output": {
+        "success": true
+      }
+    },
+    {
+      "step": 7,
+      "tool": "drop",
+      "input": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "output": {
+        "success": true
+      }
+    },
+    {
+      "step": 8,
+      "tool": "oracle_check",
+      "input": {},
+      "output": {
+        "backend": "flat2d",
+        "robot_pose": "(0.00, 0.00, yaw=0.00)",
+        "pallet_pos": "(0.00, 0.00)",
+        "pallet_to_dropoff_a_m": 0.0,
+        "carrying": null,
+        "task_complete": true
+      }
+    },
+    {
+      "step": 9,
+      "tool": "done",
+      "input": {
+        "summary": "Delivered pallet_jack to dropoff_a. Distance=0.0 m. PASS"
+      },
+      "output": {
+        "acknowledged": true,
+        "summary": "Delivered pallet_jack to dropoff_a. Distance=0.0 m. PASS"
+      }
+    }
+  ]
+}
