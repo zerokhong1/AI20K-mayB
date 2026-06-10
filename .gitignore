@@ -1,0 +1,17 @@
+# Colcon build/install artifacts
+colcon_ws/build
+colcon_ws/install
+colcon_ws/log
+# Embedded repo — track as submodule separately
+colcon_ws/src/aws-robomaker-small-warehouse-world
+# Python
+**/__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+# IDE
+.vscode
+.claude
+# Secrets
+.env
+*.key

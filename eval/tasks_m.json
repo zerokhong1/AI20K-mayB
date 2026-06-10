@@ -1,0 +1,20 @@
+[
+  {
+    "id": "m1",
+    "goal_text": "Retrieve the pallet_jack from its storage location and deliver it to drop-off zone A (dropoff_a at coordinates 0, 0).",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5
+  },
+  {
+    "id": "m2",
+    "goal_text": "The pallet_jack must be transported to the central delivery point. Navigate to the pallet_jack near (-0.28, -9.48), pick it up, and bring it to dropoff_a at (0.0, 0.0).",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5
+  },
+  {
+    "id": "m3",
+    "goal_text": "Lấy pallet_jack từ vị trí lưu trữ (gần tọa độ -0.28, -9.48) và giao đến khu vực dropoff_a (0.0, 0.0). Xác nhận hoàn thành bằng oracle_check.",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5
+  }
+]

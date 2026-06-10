@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  contract-tests:
+    name: WorldBackend contract tests (no ROS)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pytest anthropic
+
+      - name: Run tests
+        # PYTHONPATH lets pytest find the package without a colcon build.
+        # rclpy is NOT installed → GazeboBackend tests are automatically
+        # skipped; all other tests always run.
+        env:
+          PYTHONPATH: colcon_ws/src/warehouse_robot_agent
+        run: |
+          pytest tests/ \
+            -v \
+            --tb=short \
+            -q

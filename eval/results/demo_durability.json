@@ -1,0 +1,84 @@
+{
+  "run_ts": "2026-06-10T06:18:15+00:00",
+  "n_target": 5,
+  "dry_run": true,
+  "results": [
+    {
+      "attempt": 1,
+      "success": true,
+      "steps": 10,
+      "elapsed_s": 0.0,
+      "metrics": {
+        "done_called": true,
+        "steps": 10
+      },
+      "oracle": {
+        "pallet_gt": "(0.00, 0.00)",
+        "dist_to_dropoff_a_m": 0.0,
+        "success": true
+      }
+    },
+    {
+      "attempt": 2,
+      "success": true,
+      "steps": 10,
+      "elapsed_s": 0.0,
+      "metrics": {
+        "done_called": true,
+        "steps": 10
+      },
+      "oracle": {
+        "pallet_gt": "(0.00, 0.00)",
+        "dist_to_dropoff_a_m": 0.0,
+        "success": true
+      }
+    },
+    {
+      "attempt": 3,
+      "success": false,
+      "steps": 12,
+      "elapsed_s": 95.3,
+      "metrics": {
+        "done_called": true,
+        "steps": 12
+      },
+      "oracle": {
+        "pallet_gt": "(-8.00, -8.00)",
+        "dist_to_dropoff_a_m": 11.314,
+        "success": false
+      },
+      "failure_code": "pallet_not_moved",
+      "remediation": "Oracle shows pallet never reached dropoff_a. Robot may have navigated without physically pushing the pallet. Verify fork height on pick: set to 0.20 m before move_to(dropoff_a)."
+    },
+    {
+      "attempt": 4,
+      "success": true,
+      "steps": 10,
+      "elapsed_s": 0.0,
+      "metrics": {
+        "done_called": true,
+        "steps": 10
+      },
+      "oracle": {
+        "pallet_gt": "(0.00, 0.00)",
+        "dist_to_dropoff_a_m": 0.0,
+        "success": true
+      }
+    },
+    {
+      "attempt": 5,
+      "success": true,
+      "steps": 10,
+      "elapsed_s": 0.0,
+      "metrics": {
+        "done_called": true,
+        "steps": 10
+      },
+      "oracle": {
+        "pallet_gt": "(0.00, 0.00)",
+        "dist_to_dropoff_a_m": 0.0,
+        "success": true
+      }
+    }
+  ]
+}

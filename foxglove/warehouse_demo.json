@@ -1,0 +1,94 @@
+{
+  "$schema": "https://foxglove.dev/schemas/studio-layout.json",
+  "configById": {
+    "3d!warehouse_map": {
+      "followTf": "base_footprint",
+      "scene": {
+        "syncCamera": false,
+        "enableStats": false,
+        "labelScaleFactor": 1,
+        "transforms": { "axisScale": 0.5 }
+      },
+      "cameraState": {
+        "distance": 20,
+        "perspective": false,
+        "phi": 0,
+        "targetOffset": [0, 0, 0],
+        "theta": 0,
+        "thetaOffset": 0,
+        "fovy": 0.75,
+        "near": 0.01,
+        "far": 5000
+      },
+      "topics": {
+        "/map": {
+          "visible": true,
+          "frameLocked": true,
+          "color": "#1a4380",
+          "alpha": 0.7
+        },
+        "/tf": {
+          "visible": true
+        },
+        "/plan": {
+          "visible": true,
+          "color": "#00e676",
+          "lineWidth": 4,
+          "showPoints": false
+        },
+        "/global_costmap/costmap": {
+          "visible": true,
+          "color": "#ff9800",
+          "alpha": 0.4,
+          "minColor": "#000000",
+          "maxColor": "#ff0000"
+        },
+        "/local_costmap/costmap": {
+          "visible": true,
+          "color": "#ff6d00",
+          "alpha": 0.5
+        },
+        "/scan": {
+          "visible": true,
+          "color": "#ff4444",
+          "pointSize": 3
+        },
+        "/odom": {
+          "visible": false
+        },
+        "/cmd_vel": {
+          "visible": false
+        }
+      },
+      "layers": {}
+    },
+    "Image!depth_cam": {
+      "cameraTopic": "/camera/depth/image_raw",
+      "enabledMarkerTopics": [],
+      "mode": "fit",
+      "rotation": 0,
+      "flipHorizontal": false,
+      "flipVertical": false,
+      "minValue": 0,
+      "maxValue": 10000
+    },
+    "RawMessages!detections": {
+      "topicPath": "/warehouse/detected_objects",
+      "expansion": "all"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": { "speed": 1 },
+  "layout": {
+    "direction": "row",
+    "first": "3d!warehouse_map",
+    "second": {
+      "direction": "column",
+      "first": "Image!depth_cam",
+      "second": "RawMessages!detections",
+      "splitPercentage": 55
+    },
+    "splitPercentage": 60
+  }
+}
