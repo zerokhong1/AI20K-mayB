@@ -21,7 +21,7 @@ ROS 2 + Gazebo stack — requires zero changes to agent code.
 │  ┌──────────────────────────────────────────────────────────┐    │
 │  │  LLM Agent  (llm_agent.py)                                │    │
 │  │                                                            │    │
-│  │  Client: anthropic.Anthropic  (Claude Opus 4.8)           │    │
+│  │  Client: google.genai.Client  (Gemini flash-lite)          │    │
 │  │  Tool loop: perceive → locate_object → check_path         │    │
 │  │             → move_to → pick → drop → oracle_check        │    │
 │  │             → done                                         │    │
@@ -140,7 +140,7 @@ by CI test runners without ROS installed.
 │  PARITY REFERENCE (mayB-internal, 2D)            │
 │                                                   │
 │  Backend : Flat2DBackend                         │
-│  Agent   : Claude Opus 4.8 (scripted for ref)    │
+│  Agent   : scripted ref (no LLM — interface test)│
 │  Runner  : eval/run_eval_flat2d.py               │
 │  Purpose : verify WorldBackend interface works;  │
 │            NOT substitutable for P0.1 Bảng A/B  │

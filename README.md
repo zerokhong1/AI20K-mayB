@@ -12,7 +12,7 @@ One agent, two backends, same interface.
       │
       ▼
 ┌─────────────────────────────────────────────┐
-│           LLM Agent  (Claude Opus 4.8)       │
+│           LLM Agent  (Gemini flash-lite)      │
 │                                              │
 │  perceive → locate_object → check_path      │
 │  → move_to → pick → drop → oracle_check     │
@@ -22,7 +22,7 @@ One agent, two backends, same interface.
           │                        │
 ┌─────────▼──────────┐   ┌─────────▼──────────┐
 │  Flat2DBackend     │   │  GazeboBackend      │
-│  (Máy A — 2D)      │   │  (Máy B — sim 3D)  │
+│  (mayB parity ref) │   │  (Máy B — sim 3D)  │
 │                    │   │                     │
 │ • in-process, fast │   │ • ROS 2 Jazzy       │
 │ • no ROS required  │   │ • Nav2 navigation   │
@@ -47,7 +47,7 @@ One agent, two backends, same interface.
 
 ```bash
 cd ~/AI20K
-pip install anthropic pytest
+pip install google-genai pytest
 
 # Run one task
 python3 -c "
@@ -93,11 +93,12 @@ bash ~/AI20K/scripts/start_tunnel.sh
 
 | Table | Backend | Scope | File |
 |-------|---------|-------|------|
-| **Bảng 2D-ref** | Flat2DBackend (mayB) | Parity reference — confirms WorldBackend interface works end-to-end | `eval/results/report_v2.md` |
+| **Bảng 2D-ref** | Flat2DBackend (mayB) | Interface parity reference — scripted agent (not LLM), confirms WorldBackend contract | `eval/results/report_v2.md` |
 | **Bảng C** | GazeboBackend | Bonus sim→real showcase — n=3, not statistically representative | `eval/results/report_v2.md` |
 
-> **Disclosure:** Agent in this repo uses Claude Opus 4.8, not Gemini flash-lite.
-> Bảng 2D-ref results are NOT substitutable for official Bảng A/B numbers.
+> **Disclosure:** Agent in this repo uses Gemini flash-lite (same model as official BTC eval).
+> Bảng 2D-ref results are NOT substitutable for official Bảng A/B numbers
+> (different codebase, different runner, scripted ref ≠ LLM eval).
 
 ---
 
@@ -106,7 +107,7 @@ bash ~/AI20K/scripts/start_tunnel.sh
 | Item | Reality |
 |------|---------|
 | GazeboBackend | Physics simulation (Gazebo Harmonic) — not a physical robot |
-| LLM Agent (mayB) | Claude Opus 4.8. Official BTC eval uses Gemini flash-lite via LangGraph — different model, different repo. |
+| LLM Agent (mayB) | Gemini flash-lite (`gemini-2.0-flash-lite`) via `google-genai` SDK. Same model as official BTC eval; different runner (`llm_agent.py` direct, not LangGraph). |
 | `locate_object` in Gazebo | Ground-truth pose from `gz model` (default). ARMBench depth detector hook integrated but model weights not yet trained — see [DISCLOSURE_armbench.md](DISCLOSURE_armbench.md). |
 | Bảng 2D-ref | mayB-internal parity test on Flat2DBackend with scripted agent. NOT the official P0.1 Bảng A/B. |
 | Bảng C purpose | Evidence that the sim→real pathway works; same WorldBackend interface, swapped backend. Bonus track only. |

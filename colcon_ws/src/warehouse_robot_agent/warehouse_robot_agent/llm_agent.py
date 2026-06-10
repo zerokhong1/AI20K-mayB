@@ -1,25 +1,41 @@
 #!/usr/bin/env python3
 """
-LLM agent — warehouse pick-and-deliver task using GazeboBackend + Claude Opus 4.8.
+LLM agent — warehouse pick-and-deliver using WorldBackend + Gemini flash-lite.
 
 Usage (after sourcing the colcon workspace):
-  python3 llm_agent.py
-  # or via ROS 2:
-  ros2 run warehouse_robot_agent llm_agent
+  GEMINI_API_KEY=your-key python3 llm_agent.py
+  GEMINI_API_KEY=your-key ros2 run warehouse_robot_agent llm_agent
+
+Quota rule: use a GEMINI_API_KEY separate from the P0.1 official eval key.
+If sharing one key with the BTC P0.1 eval, only run this after Bảng A
+official numbers are finalized (avoid rate-limit interference).
+
+Backend: any WorldBackend (Flat2DBackend, GazeboBackend, mocks).
+Model:   gemini-2.0-flash-lite  (override with GEMINI_MODEL env var)
+SDK:     google-genai >= 2.0  (pip install google-genai)
 """
 
 import json
+import os
 import sys
 
-import anthropic
+try:
+    from google import genai
+    from google.genai import types as gtypes
+    _GEMINI_OK = True
+except ImportError:
+    _GEMINI_OK = False
 
 # rclpy and GazeboBackend are imported lazily inside main() so that
-# dispatch(), run_agent(), and the tool definitions can be imported by
+# dispatch(), run_agent(), and tool definitions can be imported by
 # tests and eval scripts without a live ROS installation.
 
 
 # ─────────────────────────── tool definitions ─────────────────────────────── #
 
+# Tool schemas in JSON Schema format. _gemini_tools() converts to gtypes.Tool.
+# Keeping them as plain dicts lets parity_check.py and eval scripts import
+# TOOLS without importing any LLM SDK.
 TOOLS: list[dict] = [
     {
         "name": "perceive",
@@ -74,8 +90,8 @@ TOOLS: list[dict] = [
     {
         "name": "pick",
         "description": (
-            "Pick up a named object. Robot should already be near it. "
-            "Returns {success: bool}. (Stub — no MoveIt yet.)"
+            "Pick up a named object. Robot must already be near it. "
+            "Returns {success: bool}."
         ),
         "input_schema": {
             "type": "object",
@@ -87,10 +103,7 @@ TOOLS: list[dict] = [
     },
     {
         "name": "drop",
-        "description": (
-            "Drop the held object at (x, y). "
-            "Returns {success: bool}. (Stub — no MoveIt yet.)"
-        ),
+        "description": "Drop the held object at (x, y). Returns {success: bool}.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -103,14 +116,14 @@ TOOLS: list[dict] = [
     {
         "name": "oracle_check",
         "description": (
-            "Query Gazebo ground-truth state to verify task completion. "
+            "Query ground-truth state to verify task completion. "
             "Returns robot_pose, carrying status, and pallet_jack GT pose."
         ),
         "input_schema": {"type": "object", "properties": {}, "required": []},
     },
     {
         "name": "done",
-        "description": "Signal that the task is fully complete. Call this as the final step.",
+        "description": "Signal task complete. Call as the final step.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -125,6 +138,23 @@ TOOLS: list[dict] = [
 ]
 
 
+# ─────────────────────────── Gemini tool builder ──────────────────────────── #
+
+def _gemini_tools() -> "list[gtypes.Tool]":
+    """Convert TOOLS (JSON Schema) → google.genai Tool list."""
+    if not _GEMINI_OK:
+        raise ImportError("google-genai not installed: pip install google-genai")
+    decls = [
+        gtypes.FunctionDeclaration(
+            name=t["name"],
+            description=t["description"],
+            parameters=t["input_schema"],
+        )
+        for t in TOOLS
+    ]
+    return [gtypes.Tool(function_declarations=decls)]
+
+
 # ─────────────────────────── tool dispatcher ──────────────────────────────── #
 
 def dispatch(backend, name: str, inp: dict) -> str:
@@ -133,46 +163,34 @@ def dispatch(backend, name: str, inp: dict) -> str:
         view = backend.perceive()
         return json.dumps({
             "robot_pose": str(view.robot_pose),
-            "objects": {k: str(v) for k, v in view.objects.items()},
-            "map_info": view.map_info,
+            "objects":    {k: str(v) for k, v in view.objects.items()},
+            "map_info":   view.map_info,
         })
-
     elif name == "locate_object":
         pose = backend.locate_object(inp["name"])
-        if pose is None:
-            return json.dumps(None)
-        return json.dumps({"x": pose.x, "y": pose.y, "yaw": pose.yaw})
-
+        return json.dumps(None if pose is None else {"x": pose.x, "y": pose.y, "yaw": pose.yaw})
     elif name == "check_path":
-        ok = backend.check_path(float(inp["x"]), float(inp["y"]))
-        return json.dumps({"reachable": ok})
-
+        return json.dumps({"reachable": backend.check_path(float(inp["x"]), float(inp["y"]))})
     elif name == "move_to":
-        yaw = float(inp.get("yaw", 0.0))
-        ok = backend.move_to(float(inp["x"]), float(inp["y"]), yaw)
+        ok = backend.move_to(float(inp["x"]), float(inp["y"]), float(inp.get("yaw", 0.0)))
         return json.dumps({"success": ok})
-
     elif name == "pick":
-        ok = backend.pick(inp["object_name"])
-        return json.dumps({"success": ok})
-
+        return json.dumps({"success": backend.pick(inp["object_name"])})
     elif name == "drop":
-        ok = backend.drop(float(inp["x"]), float(inp["y"]))
-        return json.dumps({"success": ok})
-
+        return json.dumps({"success": backend.drop(float(inp["x"]), float(inp["y"]))})
     elif name == "oracle_check":
         return json.dumps(backend.oracle_check())
-
     elif name == "done":
         return json.dumps({"acknowledged": True, "summary": inp.get("summary", "")})
-
     else:
         return json.dumps({"error": f"unknown tool: {name}"})
 
 
 # ─────────────────────────── agent loop ───────────────────────────────────── #
 
-SYSTEM_PROMPT = """You are a warehouse logistics agent controlling a TurtleBot3 Waffle AMR
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-lite")
+
+SYSTEM_PROMPT = """You are a warehouse logistics agent controlling a forklift robot
 inside a Gazebo Harmonic simulation of an AWS small warehouse.
 
 Available tools: perceive, locate_object, check_path, move_to, pick, drop, oracle_check, done.
@@ -212,79 +230,85 @@ def run_agent(
     Returns {"steps": int, "done_called": bool, "trace": list[dict]}.
     Each trace entry: {"step": int, "tool": str, "input": dict, "output": any}.
     """
-    client = anthropic.Anthropic()
+    if not _GEMINI_OK:
+        raise ImportError("google-genai not installed: pip install google-genai")
 
-    user_msg  = goal_text    if goal_text    is not None else INITIAL_USER_MSG
-    sys_prompt = system_prompt if system_prompt is not None else SYSTEM_PROMPT
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        raise RuntimeError(
+            "GEMINI_API_KEY not set.\n"
+            "  export GEMINI_API_KEY=your-key\n"
+            "Use a key SEPARATE from the P0.1 official eval key."
+        )
 
-    messages: list[dict] = [{"role": "user", "content": user_msg}]
+    client = genai.Client(api_key=api_key)
+
+    config = gtypes.GenerateContentConfig(
+        system_instruction=(system_prompt or SYSTEM_PROMPT),
+        tools=_gemini_tools(),
+        automatic_function_calling=gtypes.AutomaticFunctionCallingConfig(disable=True),
+    )
+
+    chat = client.chats.create(model=GEMINI_MODEL, config=config)
+    user_msg = goal_text or INITIAL_USER_MSG
+
     done_called = False
     step = 0
     trace: list[dict] = []
 
-    print("[agent] Starting LLM tool-calling loop …")
+    print(f"[agent] Starting LLM tool-calling loop ({GEMINI_MODEL}) …")
+    response = chat.send_message(user_msg)
 
     while not done_called and step < 30:
-        step += 1
-        print(f"\n[agent] ─── LLM call #{step} ───")
+        # Print any text the model emits
+        for part in (response.candidates[0].content.parts if response.candidates else []):
+            if getattr(part, "text", None):
+                print(f"[agent] Assistant: {part.text}")
 
-        with client.messages.stream(
-            model="claude-opus-4-8",
-            max_tokens=4096,
-            thinking={"type": "adaptive"},
-            system=sys_prompt,
-            tools=TOOLS,
-            messages=messages,
-        ) as stream:
-            response = stream.get_final_message()
+        # Collect function calls from this turn
+        parts = response.candidates[0].content.parts if response.candidates else []
+        fn_calls = [
+            p.function_call
+            for p in parts
+            if getattr(p, "function_call", None) and p.function_call.name
+        ]
 
-        # Preserve full content blocks (needed for tool_use IDs)
-        messages.append({"role": "assistant", "content": response.content})
-
-        # Print any visible text from the assistant
-        for block in response.content:
-            if hasattr(block, "text") and block.type == "text":
-                print(f"[agent] Assistant: {block.text}")
-
-        if response.stop_reason == "end_turn":
-            print("[agent] Assistant signalled end_turn — treating as complete.")
+        if not fn_calls:
+            fr = response.candidates[0].finish_reason if response.candidates else "unknown"
+            print(f"[agent] No tool calls — finish_reason={fr}")
             break
 
-        if response.stop_reason != "tool_use":
-            print(f"[agent] Unexpected stop_reason: {response.stop_reason!r} — aborting.")
-            break
+        print(f"\n[agent] ─── LLM turn ({len(fn_calls)} tool call(s)) ───")
 
-        # Execute all tool calls in this turn
-        tool_results = []
-        for block in response.content:
-            if block.type != "tool_use":
-                continue
+        fn_result_parts = []
+        for fc in fn_calls:
+            step += 1
+            name = fc.name
+            inp = dict(fc.args)
 
-            print(f"[agent] → {block.name}({json.dumps(block.input, ensure_ascii=False)})")
-            result_str = dispatch(backend, block.name, block.input)
-            print(f"[agent]   ← {result_str[:300]}")
+            print(f"[agent] [{step:02d}] → {name}({json.dumps(inp, ensure_ascii=False)})")
+            result_str = dispatch(backend, name, inp)
+            print(f"[agent]       ← {result_str[:300]}")
 
-            # Record in trace
             try:
                 output = json.loads(result_str)
             except Exception:
                 output = result_str
-            trace.append({"step": step, "tool": block.name,
-                           "input": block.input, "output": output})
 
-            if block.name == "done":
+            trace.append({"step": step, "tool": name, "input": inp, "output": output})
+
+            if name == "done":
                 done_called = True
 
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": block.id,
-                "content": result_str,
-            })
+            fn_result_parts.append(
+                gtypes.Part.from_function_response(name=name, response={"output": output})
+            )
 
-        messages.append({"role": "user", "content": tool_results})
+        if fn_result_parts and not done_called:
+            response = chat.send_message(fn_result_parts)
 
     print("\n[agent] ══════════════════════════════")
-    print("[agent] Task loop finished.")
+    print(f"[agent] Task loop finished. steps={step} done={done_called}")
     if done_called:
         print("[agent] Status: DONE ✓")
     else:

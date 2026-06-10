@@ -2,6 +2,12 @@
 
 > **Phần của Hybrid demo.** File đôi: xem **`PLAN_may_A_web2d.md`** cho Máy A.
 > **Máy B = PC Linux riêng.** Vai trò: nơi **DUY NHẤT** chạy phần nặng (Gazebo, AWS, ARMBench, ROS 2).
+>
+> **⚠️ Quy tắc bắt buộc Q1–Q4 (không output = không tính báo cáo; thứ tự lệnh; K fail-to; disclosure)
+> nằm ở `plan/PLAN_may_B_gazebo.md §0` — đọc trước khi báo cáo bất kỳ bước nào.**
+>
+> **LLM agent: Gemini flash-lite (`gemini-2.0-flash-lite`) — cùng model với official BTC eval.
+> GEMINI_API_KEY riêng; không dùng chung với P0.1 cho đến khi Bảng A official chốt số.**
 
 ---
 

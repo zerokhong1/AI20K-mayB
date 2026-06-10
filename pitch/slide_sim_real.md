@@ -25,13 +25,15 @@
                    │  WorldBackend (ABC)
            ┌───────┴───────┐
            │               │
-    Flat2DBackend     GazeboBackend
-    (mayB ref)        (Máy B)
-    instant, offline  Nav2 + Gazebo
-    2D parity ref     Bảng C *
+    Flat2DBackend       GazeboBackend
+    (mayB — offline)    (Máy B)
+    instant, no ROS     Nav2 + Gazebo
+    2D parity ref *     Bảng C **
 ```
 
-`* Bảng C = bonus showcase sim→real, không thuộc phạm vi đo chính.`
+`* 2D parity ref = scripted agent (không phải LLM), xác nhận WorldBackend interface đúng.`
+`** Bảng C = LLM agent (Gemini flash-lite) + Gazebo backend — bonus showcase sim→real.`
+`   Official P0.1 Bảng A/B = BTC repo (LangGraph + Gemini flash-lite, n=33).`
 
 **Chuyển backend bằng 1 biến môi trường:**
 ```bash
@@ -76,7 +78,7 @@ Cùng 1 goal: *"Retrieve pallet_jack → deliver to dropoff_a"*
 ## ── HỎI ĐÁP (chuẩn bị sẵn) ────────────────────────────────────
 
 **"Cùng code agent thật không, hay chỉ là wrapper?"**
-> "Đây là cùng file `llm_agent.py`, cùng Claude API call, cùng tool loop.  
+> "Đây là cùng file `llm_agent.py`, cùng Gemini flash-lite API call, cùng tool loop.  
 > Dòng `dispatch(tool_name, args, backend)` là điểm duy nhất backend được inject.  
 > Không có nhánh `if gazebo:` hay `if flat2d:` trong agent code."
 
@@ -90,10 +92,10 @@ Cùng 1 goal: *"Retrieve pallet_jack → deliver to dropoff_a"*
 > Trace Flat2D (trong repo mayB) là thật — 10 bước, oracle PASS, đo được trong `eval/results/`.  
 > Bảng A/B official chạy ở repo BTC (LangGraph + Gemini flash-lite) — tách biệt."
 
-**"Agent ở đây là Gemini hay Claude?"**
-> "Agent trong repo mayB dùng Claude Opus 4.8 — đây là bonus track sim→real độc lập.  
-> Agent official trong repo BTC dùng Gemini flash-lite qua LangGraph.  
-> Hai codebase cùng claim WorldBackend pattern nhưng chạy tách biệt."
+**"Agent ở đây là model gì?"**
+> "Agent trong repo mayB dùng Gemini flash-lite (`gemini-2.0-flash-lite`) — cùng model với official.  
+> Khác biệt: repo mayB dùng `llm_agent.py` trực tiếp; repo BTC dùng LangGraph.  
+> Cùng model, cùng tool schema, cùng WorldBackend interface — đổi backend là đổi sim environment."
 
 ---
 
