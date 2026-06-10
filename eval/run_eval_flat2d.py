@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Bảng A eval runner — Flat2DBackend, local deterministic agent.
+2D parity reference runner — Flat2DBackend, scripted deterministic agent.
 
 Runs all tasks in tasks_m.json through a scripted (non-LLM) agent that
 executes the optimal tool sequence on Flat2DBackend. No Anthropic API,
 no ROS, no Gazebo required.
 
-The scripted agent is *not* the LLM agent — it is a reference implementation
-that proves the backend interface is correct and the oracle evaluation passes.
-LLM agent eval (Bảng A with claude-opus) is run on Machine A.
+PURPOSE: verify the WorldBackend interface is correct end-to-end.
+NOT the official P0.1 Bảng A/B (official = BTC repo, LangGraph + Gemini flash-lite, n=33).
 
 Usage:
   python3 eval/run_eval_flat2d.py
@@ -17,7 +16,7 @@ Usage:
 
 Outputs:
   eval/results/traces/<run_id>_<task_id>_flat2d_trace.json
-  Updates Bảng A table in eval/results/report_v2.md
+  Updates Bảng 2D-ref table in eval/results/report_v2.md
 """
 
 import argparse
@@ -141,9 +140,10 @@ def run_task(task: dict, run_ts: str) -> dict:
 
 # ─────────────────────────── report update ───────────────────────────────── #
 
-def _bảng_a_table(rows: list[dict], run_ts: str) -> str:
+def _bảng_2d_ref_table(rows: list[dict], run_ts: str) -> str:
     header = (
-        f"> Backend: `Flat2DBackend` · agent: scripted (reference path) · "
+        f"> **KHÔNG PHẢI P0.1 official.** Interface verification only.\n"
+        f"> Backend: `Flat2DBackend` · agent: scripted reference path · "
         f"Run: {run_ts}\n\n"
         "| Task ID | goal_text (tóm tắt) | Success | Steps | Time (s) | "
         "Dist→dropoff_a (m) | locate_object source |\n"
@@ -163,13 +163,13 @@ def _bảng_a_table(rows: list[dict], run_ts: str) -> str:
 
 def update_report(rows: list[dict], report_path: Path, run_ts: str):
     text = report_path.read_text()
-    new_block = _bảng_a_table(rows, run_ts)
+    new_block = _bảng_2d_ref_table(rows, run_ts)
 
-    # Replace the placeholder block between "## Bảng A" and the next "---"
+    # Replace the placeholder block between "## Bảng 2D-ref" and the next "---"
     import re
-    pattern = r"(## Bảng A.*?---)"
+    pattern = r"(## Bảng 2D-ref.*?---)"
     replacement = (
-        "## Bảng A — 2D Flat World (kết quả chính)\n\n"
+        "## Bảng 2D-ref — Parity reference (mayB-internal)\n\n"
         + new_block
         + "\n---"
     )
@@ -200,7 +200,7 @@ def main():
             sys.exit(1)
 
     run_ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    print(f"[eval] Bảng A eval — {len(tasks)} task(s) — {run_ts}")
+    print(f"[eval] 2D parity ref — {len(tasks)} task(s) — {run_ts}")
 
     rows = []
     for task in tasks:
@@ -213,7 +213,7 @@ def main():
     update_report(rows, Path(args.out), run_ts)
 
     passed = sum(1 for r in rows if r["success"])
-    print(f"\n[eval] ══ Bảng A: {passed}/{len(rows)} passed ══")
+    print(f"\n[eval] ══ 2D-ref: {passed}/{len(rows)} passed (interface verification only) ══")
 
 
 if __name__ == "__main__":

@@ -164,7 +164,7 @@ graph TB
 - [x] `GazeboBackend` (cùng `WorldBackend`) — agent 1 task end‑to‑end
 - [x] Oracle đọc ground‑truth Gazebo
 - [x] foxglove_bridge xem được từ trình duyệt
-- [x] (Stretch) ARMBench detector cho `locate_object`
+- [x] ARMBench hook tích hợp — weights chưa train (xem `DISCLOSURE_armbench.md`); depth-blob fallback active; `locate_object` đang dùng ground-truth gz_gt
 - [x] Video Gazebo 3 phút quay xong
 
 ---
@@ -204,4 +204,5 @@ graph TB
 ### 11.5 Demo day
 
 - [ ] Dry‑run chuyển cảnh: live 2D (Máy A) → video/stream Gazebo (Máy B) đúng timing kịch bản 3'
-- [ ] Thuộc câu trả lời Q&A: *"Đây có phải robot thật?"* → "Gazebo là mô phỏng vật lý 3D; agent thật; đường sim→real đi qua cùng interface `WorldBackend` — bằng chứng là 2D và Gazebo chạy cùng code agent"
+- [ ] Thuộc câu trả lời Q&A: *"Đây có phải robot thật?"* → "Gazebo là mô phỏng vật lý 3D; agent thật; đường sim→real đi qua cùng interface `WorldBackend` — bằng chứng là 2D và Gazebo chạy cùng code agent **trong repo mayB này**"
+  > **Caveat (F2):** Cụm "cùng code agent" đúng trong phạm vi repo mayB (llm_agent.py + WorldBackend). Repo BTC (official) dùng LangGraph + Gemini — codebase khác. Không nói "2D official và Gazebo cùng code" vì 2D official chạy code BTC, không phải llm_agent.py của mayB.

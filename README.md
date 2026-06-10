@@ -30,12 +30,14 @@ One agent, two backends, same interface.
 │ • offline eval     │   │ • foxglove_bridge   │
 └────────────────────┘   └─────────────────────┘
  WORLD_BACKEND=flat2d     WORLD_BACKEND=gazebo
- ← Bảng A/B (official)    ← Bảng C (bonus showcase)
+ ← 2D parity ref          ← Bảng C (bonus showcase)
+   (mayB-internal)           (sim→real demo)
 ```
 
-> **Scope boundary:** Bảng A and Bảng B are measured exclusively on `Flat2DBackend`.  
-> Bảng C (Gazebo) is a **bonus sim→real showcase** — it demonstrates the same agent
-> running against a physics simulator but is **not part of the official evaluation**.
+> **Scope boundary (mayB repo):** This repo contains a mayB-internal 2D parity reference
+> and a Gazebo bonus showcase (Bảng C). **The official P0.1 Bảng A/B evaluation
+> (LangGraph + Gemini flash-lite, n=33) lives in the BTC repo, not here.**
+> Bảng C (Gazebo) is a bonus sim→real showcase — same agent code, different backend.
 
 ---
 
@@ -86,11 +88,16 @@ bash ~/AI20K/scripts/start_tunnel.sh
 
 ## Evaluation tables
 
+> **Official P0.1 Bảng A/B** (LangGraph + Gemini flash-lite, n=33) = BTC repo, not here.
+> Tables below are mayB-internal evidence only.
+
 | Table | Backend | Scope | File |
 |-------|---------|-------|------|
-| **Bảng A** | Flat2DBackend | Official evaluation — 2D tasks | `eval/results/report_v2.md` |
-| **Bảng B** | Flat2DBackend | Official evaluation — extended | `eval/results/report_v2.md` |
-| **Bảng C** | GazeboBackend | Bonus showcase only — n is small | `eval/results/report_v2.md` |
+| **Bảng 2D-ref** | Flat2DBackend (mayB) | Parity reference — confirms WorldBackend interface works end-to-end | `eval/results/report_v2.md` |
+| **Bảng C** | GazeboBackend | Bonus sim→real showcase — n=3, not statistically representative | `eval/results/report_v2.md` |
+
+> **Disclosure:** Agent in this repo uses Claude Opus 4.8, not Gemini flash-lite.
+> Bảng 2D-ref results are NOT substitutable for official Bảng A/B numbers.
 
 ---
 
@@ -99,9 +106,10 @@ bash ~/AI20K/scripts/start_tunnel.sh
 | Item | Reality |
 |------|---------|
 | GazeboBackend | Physics simulation (Gazebo Harmonic) — not a physical robot |
-| LLM Agent | Real Claude Opus 4.8 API calls; real tool results from ROS 2 |
+| LLM Agent (mayB) | Claude Opus 4.8. Official BTC eval uses Gemini flash-lite via LangGraph — different model, different repo. |
 | `locate_object` in Gazebo | Ground-truth pose from `gz model` (default). ARMBench depth detector hook integrated but model weights not yet trained — see [DISCLOSURE_armbench.md](DISCLOSURE_armbench.md). |
-| Bảng C purpose | Evidence that the sim→real pathway works; same agent code, swapped backend |
+| Bảng 2D-ref | mayB-internal parity test on Flat2DBackend with scripted agent. NOT the official P0.1 Bảng A/B. |
+| Bảng C purpose | Evidence that the sim→real pathway works; same WorldBackend interface, swapped backend. Bonus track only. |
 
 ---
 

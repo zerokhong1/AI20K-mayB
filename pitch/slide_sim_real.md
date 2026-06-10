@@ -26,9 +26,9 @@
            ┌───────┴───────┐
            │               │
     Flat2DBackend     GazeboBackend
-    (Máy A)           (Máy B)
+    (mayB ref)        (Máy B)
     instant, offline  Nav2 + Gazebo
-    Bảng A/B          Bảng C *
+    2D parity ref     Bảng C *
 ```
 
 `* Bảng C = bonus showcase sim→real, không thuộc phạm vi đo chính.`
@@ -87,7 +87,13 @@ Cùng 1 goal: *"Retrieve pallet_jack → deliver to dropoff_a"*
 
 **"Trace Gazebo có thật không hay giả lập?"**
 > "Bảng C hiện là dry-run chờ stack Gazebo live.  
-> Trace Flat2D là thật — 10 bước, oracle PASS, đo được trong `eval/results/`."
+> Trace Flat2D (trong repo mayB) là thật — 10 bước, oracle PASS, đo được trong `eval/results/`.  
+> Bảng A/B official chạy ở repo BTC (LangGraph + Gemini flash-lite) — tách biệt."
+
+**"Agent ở đây là Gemini hay Claude?"**
+> "Agent trong repo mayB dùng Claude Opus 4.8 — đây là bonus track sim→real độc lập.  
+> Agent official trong repo BTC dùng Gemini flash-lite qua LangGraph.  
+> Hai codebase cùng claim WorldBackend pattern nhưng chạy tách biệt."
 
 ---
 

@@ -1,8 +1,12 @@
 # Eval Results — AI20K Warehouse Agent
 
-## Bảng A — 2D Flat World (kết quả chính)
+## Bảng 2D-ref — Parity reference (mayB-internal)
 
-> Backend: `Flat2DBackend` · agent: scripted (reference path) · Run: 2026-06-10T16:43:44+00:00
+> **KHÔNG PHẢI P0.1 official.** Official Bảng A/B = BTC repo (LangGraph + Gemini flash-lite, n=33).
+> File này chỉ xác nhận WorldBackend interface hoạt động end-to-end trên Flat2DBackend.
+> Agent ở đây dùng scripted path (không phải LLM), model khác (Claude vs Gemini).
+
+> Backend: `Flat2DBackend` · agent: scripted reference path · Run: 2026-06-10T16:43:44+00:00
 
 | Task ID | goal_text (tóm tắt) | Success | Steps | Time (s) | Dist→dropoff_a (m) | locate_object source |
 |---------|---------------------|---------|-------|----------|--------------------|----------------------|

@@ -44,7 +44,7 @@ ROS 2 + Gazebo stack — requires zero changes to agent code.
 │  │ CI-safe            │          │ Nav2 NavigateToPose      │     │
 │  └────────────────────┘          │ Nav2 ComputePathToPose   │     │
 │   WORLD_BACKEND=flat2d           │ gz CLI (oracle/teleport) │     │
-│   ← Bảng A/B (official)          └──────────────────────────┘     │
+│   ← 2D parity ref (mayB-internal)          └──────────────────────────┘     │
 │                                   WORLD_BACKEND=gazebo             │
 │                                   ← Bảng C (bonus showcase)        │
 └──────────────────────────────────────────────────────────────────┘
@@ -126,14 +126,24 @@ by CI test runners without ROS installed.
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  OFFICIAL EVALUATION (Bảng A + Bảng B)          │
+│  OFFICIAL P0.1 Bảng A/B — NOT IN THIS REPO      │
+│                                                   │
+│  Repo    : BTC repo (Máy A)                      │
+│  Agent   : LangGraph + Gemini flash-lite         │
+│  Runner  : eval/run_eval_v2.py                   │
+│  N       : 33                                     │
+│                                                   │
+│  These are the numbers that go into the report.  │
+└─────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────┐
+│  PARITY REFERENCE (mayB-internal, 2D)            │
 │                                                   │
 │  Backend : Flat2DBackend                         │
-│  Machine : Máy A (Windows) or any Python env     │
-│  Oracle  : Flat2DBackend.oracle_check()          │
-│  N       : as defined in eval/tasks_m.json       │
-│                                                   │
-│  These numbers go into the final report.         │
+│  Agent   : Claude Opus 4.8 (scripted for ref)    │
+│  Runner  : eval/run_eval_flat2d.py               │
+│  Purpose : verify WorldBackend interface works;  │
+│            NOT substitutable for P0.1 Bảng A/B  │
 └─────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────┐
