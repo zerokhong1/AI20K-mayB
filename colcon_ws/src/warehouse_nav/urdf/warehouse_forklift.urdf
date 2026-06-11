@@ -1,0 +1,193 @@
+<?xml version="1.0"?>
+<!--
+  Warehouse Forklift URDF — used by robot_state_publisher for TF + Foxglove 3D view.
+  Must match the SDF joint structure (same link/joint names).
+-->
+<robot name="warehouse_forklift">
+
+  <link name="base_footprint"/>
+
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.12" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <inertial>
+      <mass value="25.0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.542" ixy="0" ixz="0" iyy="1.000" iyz="0" izz="1.302"/>
+    </inertial>
+    <collision><origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.65 0.45 0.24"/></geometry>
+    </collision>
+    <visual><origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.65 0.45 0.24"/></geometry>
+      <material name="green"><color rgba="0.12 0.38 0.12 1"/></material>
+    </visual>
+  </link>
+
+  <!-- Drive wheels -->
+  <joint name="wheel_left_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="wheel_left_link"/>
+    <origin xyz="0 0.265 -0.02" rpy="-1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="wheel_left_link">
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.00395" ixy="0" ixz="0" iyy="0.00395" iyz="0" izz="0.00750"/>
+    </inertial>
+    <collision><geometry><cylinder radius="0.10" length="0.04"/></geometry></collision>
+    <visual><geometry><cylinder radius="0.10" length="0.04"/></geometry>
+      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+  </link>
+
+  <joint name="wheel_right_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="wheel_right_link"/>
+    <origin xyz="0 -0.265 -0.02" rpy="-1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="wheel_right_link">
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.00395" ixy="0" ixz="0" iyy="0.00395" iyz="0" izz="0.00750"/>
+    </inertial>
+    <collision><geometry><cylinder radius="0.10" length="0.04"/></geometry></collision>
+    <visual><geometry><cylinder radius="0.10" length="0.04"/></geometry>
+      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+  </link>
+
+  <!-- Rear casters (fixed in URDF — physics handled by SDF ball joints) -->
+  <joint name="caster_back_left_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_back_left_link"/>
+    <origin xyz="-0.25 0.15 -0.07" rpy="0 0 0"/>
+  </joint>
+  <link name="caster_back_left_link">
+    <inertial><mass value="0.3"/>
+      <inertia ixx="3e-4" ixy="0" ixz="0" iyy="3e-4" iyz="0" izz="3e-4"/>
+    </inertial>
+    <collision><geometry><sphere radius="0.05"/></geometry></collision>
+    <visual><geometry><sphere radius="0.05"/></geometry>
+      <material name="darkgray"><color rgba="0.15 0.15 0.15 1"/></material>
+    </visual>
+  </link>
+
+  <joint name="caster_back_right_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_back_right_link"/>
+    <origin xyz="-0.25 -0.15 -0.07" rpy="0 0 0"/>
+  </joint>
+  <link name="caster_back_right_link">
+    <inertial><mass value="0.3"/>
+      <inertia ixx="3e-4" ixy="0" ixz="0" iyy="3e-4" iyz="0" izz="3e-4"/>
+    </inertial>
+    <collision><geometry><sphere radius="0.05"/></geometry></collision>
+    <visual><geometry><sphere radius="0.05"/></geometry>
+      <material name="darkgray"><color rgba="0.15 0.15 0.15 1"/></material>
+    </visual>
+  </link>
+
+  <!-- LiDAR -->
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="base_scan"/>
+    <origin xyz="0 0 0.155" rpy="0 0 0"/>
+  </joint>
+  <link name="base_scan">
+    <inertial><mass value="0.1"/>
+      <inertia ixx="7.15e-5" ixy="0" ixz="0" iyy="7.15e-5" iyz="0" izz="6.13e-5"/>
+    </inertial>
+    <collision><geometry><cylinder radius="0.035" length="0.07"/></geometry></collision>
+    <visual><geometry><cylinder radius="0.035" length="0.07"/></geometry>
+      <material name="red"><color rgba="0.5 0.1 0.1 1"/></material>
+    </visual>
+  </link>
+
+  <!-- S3/S4 Camera: forward-facing, above body -->
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.30 0 0.22" rpy="0 0 0"/>
+  </joint>
+  <link name="camera_link">
+    <inertial>
+      <mass value="0.03"/>
+      <inertia ixx="1.25e-6" ixy="0" ixz="0" iyy="1.25e-6" iyz="0" izz="1.25e-6"/>
+    </inertial>
+    <collision><geometry><box size="0.03 0.08 0.02"/></geometry></collision>
+    <visual><geometry><box size="0.03 0.08 0.02"/></geometry>
+      <material name="blue"><color rgba="0.2 0.2 0.8 1"/></material>
+    </visual>
+  </link>
+
+  <!-- Optical frame: z-forward / y-down for ARMBench 2D→3D projection -->
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_optical_link"/>
+    <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
+  </joint>
+  <link name="camera_optical_link"/>
+
+  <!-- S5 IMU: centre of robot body -->
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+  <link name="imu_link">
+    <inertial>
+      <mass value="0.001"/>
+      <inertia ixx="1e-7" ixy="0" ixz="0" iyy="1e-7" iyz="0" izz="1e-7"/>
+    </inertial>
+  </link>
+
+  <!-- Fork mast -->
+  <joint name="mast_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="fork_mast_link"/>
+    <origin xyz="0.325 0 0.155" rpy="0 0 0"/>
+  </joint>
+  <link name="fork_mast_link">
+    <inertial><mass value="3.0"/>
+      <inertia ixx="0.0981" ixy="0" ixz="0" iyy="0.0772" iyz="0" izz="0.0241"/>
+    </inertial>
+    <collision><geometry><box size="0.08 0.30 0.55"/></geometry></collision>
+    <visual><geometry><box size="0.08 0.30 0.55"/></geometry>
+      <material name="yellow"><color rgba="0.9 0.75 0.0 1"/></material>
+    </visual>
+  </link>
+
+  <!-- Fork (prismatic — moves in Z) -->
+  <joint name="fork_joint" type="prismatic">
+    <parent link="fork_mast_link"/>
+    <child link="fork_link"/>
+    <origin xyz="0.04 0 -0.245" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0.0" upper="0.30" effort="500" velocity="0.3"/>
+  </joint>
+  <link name="fork_link">
+    <inertial><mass value="2.0"/>
+      <inertia ixx="0.01083" ixy="0" ixz="0" iyy="0.06042" iyz="0" izz="0.07042"/>
+    </inertial>
+    <!-- geometry offset 0.30 m forward of joint origin -->
+    <collision>
+      <origin xyz="0.30 0 0.025" rpy="0 0 0"/>
+      <geometry><box size="0.60 0.25 0.05"/></geometry>
+    </collision>
+    <visual>
+      <origin xyz="0.30 0 0.025" rpy="0 0 0"/>
+      <geometry><box size="0.60 0.25 0.05"/></geometry>
+      <material name="yellow"><color rgba="0.95 0.8 0.0 1"/></material>
+    </visual>
+  </link>
+
+</robot>

@@ -1,0 +1,57 @@
+foxglove_bridge:
+  ros__parameters:
+    port: 8765
+    address: "0.0.0.0"
+    tls: false
+    send_buffer_limit: 10000000   # 10 MB — raise if video streaming lags
+    use_compression: true
+    num_threads: 4
+
+    # Topics exposed to Foxglove Studio.
+    # Empty list = all topics. Explicit whitelist reduces bandwidth.
+    topic_whitelist:
+      - "/map"
+      - "/amcl_pose"
+      - "/odom"
+      - "/scan"
+      - "/tf"
+      - "/tf_static"
+      - "/cmd_vel"
+      - "/cmd_vel_smoothed"
+      - "/plan"
+      - "/local_costmap/costmap"
+      - "/local_costmap/costmap_raw"
+      - "/local_costmap/published_footprint"
+      - "/global_costmap/costmap"
+      - "/global_costmap/costmap_raw"
+      - "/global_costmap/published_footprint"
+      - "/particlecloud"
+      - "/waypoints"
+      - "/warehouse/detected_objects"
+      - "/camera/depth/image_raw"
+      - "/camera/camera_info"
+      - "/joint_states"
+      - "/imu"
+      - "/robot_description"
+      - "/rosout"
+      - "/clock"
+      - "/collision_monitor_state"
+      - "/behavior_server/.*"
+      - "/navigate_to_pose/.*"
+      - "/bt_navigator/.*"
+
+    # Services exposed (allow goal sending from Foxglove)
+    service_whitelist:
+      - ".*"
+
+    # Parameters accessible from Foxglove
+    param_whitelist:
+      - ".*"
+
+    capabilities:
+      - "clientPublish"
+      - "parameters"
+      - "parametersSubscribe"
+      - "services"
+      - "connectionGraph"
+      - "assets"

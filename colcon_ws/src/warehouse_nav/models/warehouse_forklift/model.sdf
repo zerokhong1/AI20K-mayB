@@ -1,0 +1,468 @@
+<?xml version="1.0" ?>
+<!--
+  Warehouse Forklift — Gazebo Harmonic SDF
+  Body: 0.65 × 0.45 × 0.24 m  |  Drive wheels: R=0.10 m
+  Prismatic fork: 0–0.30 m stroke, controlled via /fork_cmd (gz.msgs.Double)
+  Nav2-compatible: publishes /odom, /tf, /scan, /joint_states, /cmd_vel
+-->
+<sdf version="1.9">
+  <model name="warehouse_forklift">
+    <static>false</static>
+
+    <!-- ══════════════════ LINKS ══════════════════ -->
+
+    <!-- Virtual ground frame -->
+    <link name="base_footprint">
+      <inertial>
+        <mass>1e-9</mass>
+        <inertia><ixx>1e-9</ixx><ixy>0</ixy><ixz>0</ixz>
+                 <iyy>1e-9</iyy><iyz>0</iyz><izz>1e-9</izz></inertia>
+      </inertial>
+    </link>
+
+    <!-- Main body — 0.65 × 0.45 × 0.24 m, green -->
+    <link name="base_link">
+      <inertial>
+        <mass>25.0</mass>
+        <inertia>
+          <ixx>0.542</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>1.000</iyy><iyz>0</iyz><izz>1.302</izz>
+        </inertia>
+      </inertial>
+      <collision name="base_collision">
+        <geometry><box><size>0.65 0.45 0.24</size></box></geometry>
+      </collision>
+      <visual name="base_visual">
+        <geometry><box><size>0.65 0.45 0.24</size></box></geometry>
+        <material>
+          <ambient>0.12 0.38 0.12 1</ambient>
+          <diffuse>0.12 0.38 0.12 1</diffuse>
+          <specular>0.05 0.1 0.05 1</specular>
+        </material>
+      </visual>
+      <!-- Operator compartment — raised box on top-rear -->
+      <visual name="cab_visual">
+        <pose>-0.18 0 0.20 0 0 0</pose>
+        <geometry><box><size>0.28 0.44 0.16</size></box></geometry>
+        <material>
+          <ambient>0.08 0.25 0.08 1</ambient>
+          <diffuse>0.08 0.25 0.08 1</diffuse>
+        </material>
+      </visual>
+    </link>
+
+    <!-- Left drive wheel — cylinder R=0.10, L=0.04 -->
+    <link name="wheel_left_link">
+      <inertial>
+        <mass>1.5</mass>
+        <inertia>
+          <ixx>0.00395</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.00395</iyy><iyz>0</iyz><izz>0.00750</izz>
+        </inertia>
+      </inertial>
+      <collision name="wheel_left_collision">
+        <geometry><cylinder><radius>0.10</radius><length>0.04</length></cylinder></geometry>
+        <surface>
+          <friction><ode><mu>1.5</mu><mu2>0.5</mu2></ode></friction>
+        </surface>
+      </collision>
+      <visual name="wheel_left_visual">
+        <geometry><cylinder><radius>0.10</radius><length>0.04</length></cylinder></geometry>
+        <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+      </visual>
+    </link>
+
+    <!-- Right drive wheel -->
+    <link name="wheel_right_link">
+      <inertial>
+        <mass>1.5</mass>
+        <inertia>
+          <ixx>0.00395</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.00395</iyy><iyz>0</iyz><izz>0.00750</izz>
+        </inertia>
+      </inertial>
+      <collision name="wheel_right_collision">
+        <geometry><cylinder><radius>0.10</radius><length>0.04</length></cylinder></geometry>
+        <surface>
+          <friction><ode><mu>1.5</mu><mu2>0.5</mu2></ode></friction>
+        </surface>
+      </collision>
+      <visual name="wheel_right_visual">
+        <geometry><cylinder><radius>0.10</radius><length>0.04</length></cylinder></geometry>
+        <material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.1 0.1 0.1 1</diffuse></material>
+      </visual>
+    </link>
+
+    <!-- Rear-left caster — sphere R=0.05 -->
+    <link name="caster_back_left_link">
+      <inertial>
+        <mass>0.3</mass>
+        <inertia>
+          <ixx>0.0003</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.0003</iyy><iyz>0</iyz><izz>0.0003</izz>
+        </inertia>
+      </inertial>
+      <collision name="caster_back_left_collision">
+        <geometry><sphere><radius>0.05</radius></sphere></geometry>
+        <surface><friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction></surface>
+      </collision>
+      <visual name="caster_back_left_visual">
+        <geometry><sphere><radius>0.05</radius></sphere></geometry>
+        <material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.15 0.15 0.15 1</diffuse></material>
+      </visual>
+    </link>
+
+    <!-- Rear-right caster -->
+    <link name="caster_back_right_link">
+      <inertial>
+        <mass>0.3</mass>
+        <inertia>
+          <ixx>0.0003</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.0003</iyy><iyz>0</iyz><izz>0.0003</izz>
+        </inertia>
+      </inertial>
+      <collision name="caster_back_right_collision">
+        <geometry><sphere><radius>0.05</radius></sphere></geometry>
+        <surface><friction><ode><mu>0.0</mu><mu2>0.0</mu2></ode></friction></surface>
+      </collision>
+      <visual name="caster_back_right_visual">
+        <geometry><sphere><radius>0.05</radius></sphere></geometry>
+        <material><ambient>0.1 0.1 0.1 1</ambient><diffuse>0.15 0.15 0.15 1</diffuse></material>
+      </visual>
+    </link>
+
+    <!-- LiDAR link -->
+    <link name="base_scan">
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>7.15e-5</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>7.15e-5</iyy><iyz>0</iyz><izz>6.13e-5</izz>
+        </inertia>
+      </inertial>
+      <collision name="lidar_collision">
+        <geometry><cylinder><radius>0.035</radius><length>0.07</length></cylinder></geometry>
+      </collision>
+      <visual name="lidar_visual">
+        <geometry><cylinder><radius>0.035</radius><length>0.07</length></cylinder></geometry>
+        <material><ambient>0.5 0.1 0.1 1</ambient><diffuse>0.5 0.1 0.1 1</diffuse></material>
+      </visual>
+      <sensor name="hls_lfcd_lds" type="gpu_lidar">
+        <always_on>1</always_on>
+        <visualize>false</visualize>
+        <update_rate>5</update_rate>
+        <topic>/scan</topic>
+        <gz_frame_id>base_scan</gz_frame_id>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>360</samples>
+              <resolution>1</resolution>
+              <min_angle>0</min_angle>
+              <max_angle>6.28318530718</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>1</samples>
+              <min_angle>0</min_angle>
+              <max_angle>0</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>0.12</min>
+            <max>6.0</max>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.01</stddev>
+          </noise>
+        </ray>
+      </sensor>
+    </link>
+
+    <!-- Fork mast — 0.08 × 0.30 × 0.55 m, yellow -->
+    <link name="fork_mast_link">
+      <inertial>
+        <mass>3.0</mass>
+        <inertia>
+          <ixx>0.0981</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.0772</iyy><iyz>0</iyz><izz>0.0241</izz>
+        </inertia>
+      </inertial>
+      <collision name="mast_collision">
+        <geometry><box><size>0.08 0.30 0.55</size></box></geometry>
+      </collision>
+      <visual name="mast_visual">
+        <geometry><box><size>0.08 0.30 0.55</size></box></geometry>
+        <material>
+          <ambient>0.9 0.75 0.0 1</ambient>
+          <diffuse>0.9 0.75 0.0 1</diffuse>
+        </material>
+      </visual>
+    </link>
+
+    <!-- S3 RGB camera + S4 Depth camera — front of body, looking forward -->
+    <link name="camera_link">
+      <inertial>
+        <mass>0.03</mass>
+        <inertia>
+          <ixx>1.25e-6</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>1.25e-6</iyy><iyz>0</iyz><izz>1.25e-6</izz>
+        </inertia>
+      </inertial>
+      <collision name="camera_collision">
+        <geometry><box><size>0.03 0.08 0.02</size></box></geometry>
+      </collision>
+      <visual name="camera_visual">
+        <geometry><box><size>0.03 0.08 0.02</size></box></geometry>
+        <material>
+          <ambient>0.2 0.2 0.8 1</ambient>
+          <diffuse>0.2 0.2 0.8 1</diffuse>
+        </material>
+      </visual>
+      <!-- S3 RGB camera (BẮT BUỘC) — ARMBench detector + Foxglove view -->
+      <sensor name="rgb_camera" type="camera">
+        <always_on>1</always_on>
+        <visualize>false</visualize>
+        <update_rate>15</update_rate>
+        <topic>/camera/image</topic>
+        <gz_frame_id>camera_link</gz_frame_id>
+        <camera name="camera">
+          <camera_info_topic>/camera/camera_info</camera_info_topic>
+          <horizontal_fov>1.085595</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip><near>0.1</near><far>12.0</far></clip>
+          <noise><type>gaussian</type><mean>0.0</mean><stddev>0.007</stddev></noise>
+        </camera>
+      </sensor>
+      <!-- S4 Depth camera (NÊN CÓ) — locate_object 3D pose -->
+      <!-- gz_frame_id = camera_optical_link: gz depth data is already z-forward (optical).
+           Labelling it with the optical frame keeps cloud coords consistent with RViz/ARMBench.
+           RGB camera keeps camera_link (image pixels don't carry 3D orientation). -->
+      <sensor name="depth_camera" type="depth_camera">
+        <always_on>1</always_on>
+        <visualize>false</visualize>
+        <update_rate>10</update_rate>
+        <topic>/camera/depth/image_raw</topic>
+        <gz_frame_id>camera_optical_link</gz_frame_id>
+        <camera name="depth">
+          <horizontal_fov>1.085595</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+          </image>
+          <clip><near>0.1</near><far>8.0</far></clip>
+        </camera>
+      </sensor>
+    </link>
+
+    <!-- S5 IMU (NÊN CÓ) — fuse with odom for stable localisation -->
+    <link name="imu_link">
+      <inertial>
+        <mass>0.001</mass>
+        <inertia>
+          <ixx>1e-7</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>1e-7</iyy><iyz>0</iyz><izz>1e-7</izz>
+        </inertia>
+      </inertial>
+      <sensor name="imu_sensor" type="imu">
+        <always_on>1</always_on>
+        <update_rate>100</update_rate>
+        <topic>/imu</topic>
+        <gz_frame_id>imu_link</gz_frame_id>
+        <imu>
+          <angular_velocity>
+            <x><noise type="gaussian"><mean>0.0</mean><stddev>2e-4</stddev></noise></x>
+            <y><noise type="gaussian"><mean>0.0</mean><stddev>2e-4</stddev></noise></y>
+            <z><noise type="gaussian"><mean>0.0</mean><stddev>2e-4</stddev></noise></z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></x>
+            <y><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></y>
+            <z><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></z>
+          </linear_acceleration>
+        </imu>
+      </sensor>
+    </link>
+
+    <!-- Optical frame: z-forward / y-down (ROS camera convention for 2D→3D projection) -->
+    <link name="camera_optical_link">
+      <inertial>
+        <mass>1e-9</mass>
+        <inertia>
+          <ixx>1e-12</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>1e-12</iyy><iyz>0</iyz><izz>1e-12</izz>
+        </inertia>
+      </inertial>
+    </link>
+
+    <!-- Fork carrier — box 0.60 × 0.25 × 0.05 m, yellow -->
+    <link name="fork_link">
+      <inertial>
+        <mass>2.0</mass>
+        <inertia>
+          <ixx>0.01083</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.06042</iyy><iyz>0</iyz><izz>0.07042</izz>
+        </inertia>
+      </inertial>
+      <!-- geometry offset 0.30 m forward of joint origin -->
+      <collision name="fork_collision">
+        <pose>0.30 0 0.025 0 0 0</pose>
+        <geometry><box><size>0.60 0.25 0.05</size></box></geometry>
+      </collision>
+      <visual name="fork_visual">
+        <pose>0.30 0 0.025 0 0 0</pose>
+        <geometry><box><size>0.60 0.25 0.05</size></box></geometry>
+        <material>
+          <ambient>0.95 0.8 0.0 1</ambient>
+          <diffuse>0.95 0.8 0.0 1</diffuse>
+        </material>
+      </visual>
+    </link>
+
+    <!-- ══════════════════ JOINTS ══════════════════ -->
+
+    <!-- base_footprint → base_link: lift body to wheel-radius height -->
+    <joint name="base_joint" type="fixed">
+      <parent>base_footprint</parent>
+      <child>base_link</child>
+      <pose>0 0 0.12 0 0 0</pose>
+    </joint>
+
+    <!-- Drive wheels: z-offset puts wheel center at z=0.10 = wheel_radius -->
+    <joint name="wheel_left_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>wheel_left_link</child>
+      <pose>0 0.265 -0.02 -1.5708 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <dynamics><damping>0.01</damping><friction>0.01</friction></dynamics>
+      </axis>
+    </joint>
+
+    <joint name="wheel_right_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>wheel_right_link</child>
+      <pose>0 -0.265 -0.02 -1.5708 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <dynamics><damping>0.01</damping><friction>0.01</friction></dynamics>
+      </axis>
+    </joint>
+
+    <!-- Casters: z-offset puts sphere center at z=0.05 = sphere_radius -->
+    <joint name="caster_back_left_joint" type="ball">
+      <parent>base_link</parent>
+      <child>caster_back_left_link</child>
+      <pose>-0.25 0.15 -0.07 0 0 0</pose>
+    </joint>
+
+    <joint name="caster_back_right_joint" type="ball">
+      <parent>base_link</parent>
+      <child>caster_back_right_link</child>
+      <pose>-0.25 -0.15 -0.07 0 0 0</pose>
+    </joint>
+
+    <!-- LiDAR on top of body — 0.35 m from ground -->
+    <joint name="lidar_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>base_scan</child>
+      <pose>0 0 0.155 0 0 0</pose>
+    </joint>
+
+    <!-- Fork mast: front of body, center at z=0.275 from ground -->
+    <joint name="mast_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>fork_mast_link</child>
+      <pose>0.325 0 0.155 0 0 0</pose>
+    </joint>
+
+    <!-- Camera: above body, forward-facing (0.30 m fwd, 0.22 m above base_link centre) -->
+    <joint name="camera_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>camera_link</child>
+      <pose>0.30 0 0.22 0 0 0</pose>
+    </joint>
+
+    <!-- IMU: at centre of robot body -->
+    <joint name="imu_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>imu_link</child>
+      <pose>0 0 0 0 0 0</pose>
+    </joint>
+
+    <!-- Optical frame: camera_link (x-fwd) → camera_optical_link (z-fwd, y-down) -->
+    <joint name="camera_optical_joint" type="fixed">
+      <parent>camera_link</parent>
+      <child>camera_optical_link</child>
+      <pose>0 0 0 -1.5708 0 -1.5708</pose>
+    </joint>
+
+    <!-- Fork: prismatic up/down on mast, start near ground (z≈0.03) -->
+    <joint name="fork_joint" type="prismatic">
+      <parent>fork_mast_link</parent>
+      <child>fork_link</child>
+      <pose>0.04 0 -0.245 0 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>0.0</lower>
+          <upper>0.30</upper>
+          <effort>500</effort>
+          <velocity>0.3</velocity>
+        </limit>
+        <dynamics><damping>50.0</damping><friction>5.0</friction></dynamics>
+      </axis>
+    </joint>
+
+    <!-- ══════════════════ PLUGINS ══════════════════ -->
+
+    <!-- Differential drive — same topic names as TB3 for bridge compatibility -->
+    <plugin filename="gz-sim-diff-drive-system"
+            name="gz::sim::systems::DiffDrive">
+      <left_joint>wheel_left_joint</left_joint>
+      <right_joint>wheel_right_joint</right_joint>
+      <wheel_separation>0.53</wheel_separation>
+      <wheel_radius>0.10</wheel_radius>
+      <max_linear_acceleration>2.0</max_linear_acceleration>
+      <min_linear_acceleration>-2.0</min_linear_acceleration>
+      <max_angular_acceleration>3.0</max_angular_acceleration>
+      <min_angular_acceleration>-3.0</min_angular_acceleration>
+      <max_linear_velocity>0.8</max_linear_velocity>
+      <min_linear_velocity>-0.8</min_linear_velocity>
+      <max_angular_velocity>2.0</max_angular_velocity>
+      <min_angular_velocity>-2.0</min_angular_velocity>
+      <odom_publish_frequency>20</odom_publish_frequency>
+      <topic>/cmd_vel</topic>
+      <odom_topic>/odom</odom_topic>
+      <tf_topic>/tf</tf_topic>
+      <child_frame_id>base_footprint</child_frame_id>
+      <frame_id>odom</frame_id>
+    </plugin>
+
+    <!-- Joint states — publishes wheel + fork positions -->
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <topic>/joint_states</topic>
+    </plugin>
+
+    <!-- Fork height controller: subscribes to /fork_cmd (gz.msgs.Double) -->
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>fork_joint</joint_name>
+      <topic>/fork_cmd</topic>
+      <p_gain>200</p_gain>
+      <i_gain>1.0</i_gain>
+      <d_gain>20.0</d_gain>
+      <i_max>200</i_max>
+      <i_min>-200</i_min>
+      <cmd_max>500</cmd_max>
+      <cmd_min>-500</cmd_min>
+    </plugin>
+
+  </model>
+</sdf>
