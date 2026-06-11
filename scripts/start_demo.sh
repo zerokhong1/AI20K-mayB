@@ -29,7 +29,7 @@ if [[ ! -f "$WS/install/setup.bash" ]]; then
     _err "Run: cd $WS && colcon build"
     exit 1
 fi
-source "$WS/install/setup.bash"
+set +u; source "$WS/install/setup.bash"; set -u
 
 # ── kill any leftover processes ───────────────────────────────────────────── #
 _log "Killing leftover ROS/Gazebo processes …"
