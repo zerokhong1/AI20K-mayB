@@ -97,7 +97,7 @@ def _gz_teleport_pallet() -> bool:
         result = subprocess.run(
             [
                 "gz", "service",
-                "-s", "/world/small_warehouse/set_pose",
+                "-s", "/world/default/set_pose",
                 "--reqtype", "gz.msgs.Pose",
                 "--reptype", "gz.msgs.Boolean",
                 "--timeout", "3000",
@@ -105,7 +105,7 @@ def _gz_teleport_pallet() -> bool:
             ],
             capture_output=True, text=True, timeout=8.0,
         )
-        return result.returncode == 0
+        return "true" in result.stdout.lower()
     except Exception as exc:
         print(f"[eval] WARNING: pallet teleport failed — {exc}")
         return False
@@ -137,6 +137,9 @@ def _run_one_task_live(backend: GazeboBackend, task: dict) -> dict:
     metrics = run_agent(backend, goal_text=task["goal_text"])
     elapsed = round(time.time() - t0, 1)
 
+    # Brief pause so Gazebo physics settles after the final drop() teleport
+    # before we measure ground-truth pallet position.
+    time.sleep(1.0)
     oracle = _oracle_grade(task.get("threshold_m", 1.5))
     return {
         "id":             task["id"],
@@ -311,8 +314,14 @@ def main():
     except KeyboardInterrupt:
         print("\n[eval] Interrupted by user — writing partial results.")
     finally:
-        node.destroy_node()
-        rclpy.shutdown()
+        try:
+            node.destroy_node()
+        except Exception:
+            pass
+        try:
+            rclpy.shutdown()
+        except Exception:
+            pass
 
     _write_report(rows, run_ts, dry_run=False)
 

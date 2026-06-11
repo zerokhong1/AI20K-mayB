@@ -101,35 +101,44 @@ class GazeboBackendNode(Node):
         return self._amcl_pose or self._odom_pose
 
     def spin_until_pose(self, timeout: float = 10.0) -> bool:
+        if self.best_pose() is not None:
+            return True
         deadline = time.time() + timeout
         while time.time() < deadline:
-            rclpy.spin_once(self, timeout_sec=0.1)
+            try:
+                rclpy.spin_once(self, timeout_sec=0.1)
+            except Exception:
+                time.sleep(0.1)
             if self.best_pose() is not None:
                 return True
         return False
 
-    def navigate(self, x: float, y: float, yaw: float, timeout: float = 120.0) -> bool:
-        if not self._nav_client.wait_for_server(timeout_sec=10.0):
-            self.get_logger().error("NavigateToPose action server not available")
+    def navigate(self, x: float, y: float, yaw: float, timeout: float = 30.0) -> bool:
+        try:
+            if not self._nav_client.wait_for_server(timeout_sec=10.0):
+                self.get_logger().error("NavigateToPose action server not available")
+                return False
+
+            goal = NavigateToPose.Goal()
+            goal.pose = _make_stamped(x, y, yaw)
+
+            future = self._nav_client.send_goal_async(goal)
+            _spin_until(self, future, timeout=15.0)
+            if not future.done() or not future.result().accepted:
+                self.get_logger().error("Goal rejected")
+                return False
+
+            result_future = future.result().get_result_async()
+            _spin_until(self, result_future, timeout=timeout)
+            if not result_future.done():
+                self.get_logger().error("Navigation timed out")
+                return False
+
+            status = result_future.result().status
+            return status == GoalStatus.STATUS_SUCCEEDED
+        except Exception as exc:
+            self.get_logger().error(f"Navigation exception: {exc}")
             return False
-
-        goal = NavigateToPose.Goal()
-        goal.pose = _make_stamped(x, y, yaw)
-
-        future = self._nav_client.send_goal_async(goal)
-        _spin_until(self, future, timeout=15.0)
-        if not future.done() or not future.result().accepted:
-            self.get_logger().error("Goal rejected")
-            return False
-
-        result_future = future.result().get_result_async()
-        _spin_until(self, result_future, timeout=timeout)
-        if not result_future.done():
-            self.get_logger().error("Navigation timed out")
-            return False
-
-        status = result_future.result().status
-        return status == GoalStatus.STATUS_SUCCEEDED
 
     def has_path(self, x: float, y: float) -> bool:
         if not self._path_client.wait_for_server(timeout_sec=5.0):
@@ -267,7 +276,10 @@ class GazeboBackend(WorldBackend):
     def _spin_seconds(self, seconds: float):
         deadline = time.time() + seconds
         while time.time() < deadline:
-            rclpy.spin_once(self._node, timeout_sec=0.1)
+            try:
+                rclpy.spin_once(self._node, timeout_sec=0.1)
+            except Exception:
+                time.sleep(0.1)
 
     def oracle_check(self) -> dict:
         # Task parameters
@@ -331,7 +343,10 @@ def _make_stamped(x: float, y: float, yaw: float) -> PoseStamped:
 def _spin_until(node: Node, future, timeout: float = 30.0):
     deadline = time.time() + timeout
     while not future.done() and time.time() < deadline:
-        rclpy.spin_until_future_complete(node, future, timeout_sec=0.5)
+        try:
+            rclpy.spin_until_future_complete(node, future, timeout_sec=0.5)
+        except Exception:
+            break
 
 
 def _gz_set_pose(gz_model_name: str, x: float, y: float, z: float = 0.01) -> bool:
