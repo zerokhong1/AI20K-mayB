@@ -36,29 +36,24 @@
 > ⚠️ **Oracle KHÔNG độc lập với agent**: `drop(x,y)` gọi `gz set_pose(pallet, x, y)`;
 >    oracle đọc lại đúng vị trí đó → dist=0.000 là tautology, không phải kết quả vật lý.
 >
-> **Năng lực thật được chứng minh**: LLM agent tự ra chuỗi tool calls; Nav2 nhận goal
-> và thực thi trong môi trường 3D thật. `locate_object source = GT registry` nghĩa là
-> agent dùng bảng toạ độ tĩnh, chưa dùng camera/ARMBench.
+> **Năng lực thật được chứng minh**: LLM agent tự ra chuỗi tool calls; Nav2 nhận goal nhưng robot CHƯA tới đích (Nav²=✗, xem cột — 0/3 tasks robot trong 2.0m của dropoff_a). `locate_object source = GT registry` nghĩa là agent dùng bảng toạ độ tĩnh, chưa dùng camera/ARMBench.
 >
 > n = 3 · Pass = 3/3 (teleport-assisted)
 > Nav² = robot within 2.0m of dropoff_a (independent — drop() không di chuyển robot)
-> Run: 2026-06-11T15:09:49+00:00
+> Run: 2026-06-11T15:48:19+00:00
 
 | Task ID | goal_text (tóm tắt) | Steps | Time (s) | Nav² robot→dropoff_a | Dist pallet→dropoff_a¹ | locate_object source |
 |---------|---------------------|-------|----------|-----------------------|------------------------|----------------------|
-| m1 | Retrieve the pallet_jack from its storage location and … | 11 | 30.1 | — (not captured)³ | 0.000 | GT registry |
-| m2 | The pallet_jack must be transported to the central deli… | 11 | 23.0 | — (not captured)³ | 0.000 | GT registry |
-| m3 | Lấy pallet_jack từ vị trí lưu trữ (gần tọa độ -0.28, -9… | 8 | 15.9 | — (not captured)³ | 0.000 | GT registry |
+| m1 | Retrieve the pallet_jack from its storage location and … | 10 | 69.4 | 4.07m ✗ | 0.000 | GT registry |
+| m2 | The pallet_jack must be transported to the central deli… | 8 | 20.7 | 4.07m ✗ | 0.000 | GT registry |
+| m3 | Lấy pallet_jack từ vị trí lưu trữ (gần tọa độ -0.28, -9… | 8 | 35.0 | 4.07m ✗ | 0.000 | — |
 
 > ¹ Dist pallet→dropoff_a đo bằng `gz model -p` ngay sau `drop()` — **không phải** metric
 > độc lập; giá trị này luôn = 0 vì drop() teleport pallet tới đúng đích trước khi oracle đọc.
-> ² Robot→dropoff_a = `gz model -p warehouse_forklift` — **độc lập thật**: drop() chỉ teleport
-> pallet, không di chuyển robot. Nav✓ = robot < 2.0m từ dropoff_a.
-> ³ Robot pose không được capture trong eval run 15:09. Parity traces cùng ngày (15:12, 15:13),
-> cùng goal, cùng ROS/odom state cho thấy `robot_gt_pose = (3.45, 2.15, yaw=π)` = **spawn pose**,
-> 4.07m từ dropoff_a → **Nav✗ (timed out)**. Thời gian m1=30.1s ≈ nav timeout 30s là bằng chứng
-> bổ sung. Metric Nav² sẽ được capture đầy đủ từ run tiếp theo.
+> ² Robot→dropoff_a = `gz model -p warehouse_forklift` sau khi run_agent() trả về —
+> **độc lập thật**: drop() chỉ teleport pallet, không di chuyển robot. Nav✓ = robot < 2.0m.
 >
 > **Audit trail**: `eval/results/traces/` chứa full tool-call sequences cho mỗi run.
 > Cột *locate_object source*: **GT registry** = dict toạ độ tĩnh `_WORLD_OBJECTS` (không sensor).
 > n nhỏ (= 3) — chỉ đủ xác nhận interface end-to-end hoạt động.
+

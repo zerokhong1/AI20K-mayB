@@ -7,7 +7,7 @@ grades each with oracle ground-truth, and writes results to
 eval/results/report_v2.md and eval/results/gazebo_m_tasks.json.
 
 Prerequisites:
-  • Gazebo Harmonic running with AWS small_warehouse + TurtleBot3
+  • Gazebo Harmonic running with AWS small_warehouse + warehouse_forklift robot
   • Nav2 stack alive (NavigateToPose action server)
   • ROS 2 Jazzy sourced in the shell environment
   • eval/tasks_m.json present (sibling of this script)
@@ -228,6 +228,30 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
     total  = len(rows)
     note   = " *(dry-run — not executed)*" if dry_run else ""
 
+    nav_verdict = ""
+    nav_results = [r["oracle"].get("nav_success") for r in rows if r["oracle"].get("nav_success") is not None]
+    if nav_results:
+        nav_pass = sum(1 for x in nav_results if x is True)
+        if nav_pass == len(nav_results):
+            nav_verdict = (
+                "**Năng lực thật được chứng minh**: LLM agent tự ra chuỗi tool calls; "
+                "Nav2 nhận goal và robot đến đích (Nav²=✓ tất cả). "
+                "`locate_object source = GT registry` nghĩa là agent dùng bảng toạ độ tĩnh, chưa dùng camera/ARMBench."
+            )
+        else:
+            nav_verdict = (
+                "**Năng lực thật được chứng minh**: LLM agent tự ra chuỗi tool calls; "
+                f"Nav2 nhận goal nhưng robot CHƯA tới đích (Nav²=✗, xem cột — "
+                f"{nav_pass}/{len(nav_results)} tasks robot trong 2.0m của dropoff_a). "
+                "`locate_object source = GT registry` nghĩa là agent dùng bảng toạ độ tĩnh, chưa dùng camera/ARMBench."
+            )
+    else:
+        nav_verdict = (
+            "LLM agent tự ra chuỗi tool calls. "
+            "Nav² không capture được trong run này. "
+            "`locate_object source = GT registry` nghĩa là agent dùng bảng toạ độ tĩnh, chưa dùng camera/ARMBench."
+        )
+
     bang_c_header = f"""\
 ## Bảng C — Gazebo navigation showcase (teleport-assisted){note}
 
@@ -238,9 +262,7 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
 > ⚠️ **Oracle KHÔNG độc lập với agent**: `drop(x,y)` gọi `gz set_pose(pallet, x, y)`;
 >    oracle đọc lại đúng vị trí đó → dist=0.000 là tautology, không phải kết quả vật lý.
 >
-> **Năng lực thật được chứng minh**: LLM agent tự ra chuỗi tool calls; Nav2 nhận goal
-> và thực thi trong môi trường 3D thật. `locate_object source = GT registry` nghĩa là
-> agent dùng bảng toạ độ tĩnh, chưa dùng camera/ARMBench.
+> {nav_verdict}
 >
 > n = {total} · Pass = {passes}/{total} (teleport-assisted)
 > Nav² = robot within {NAV_TOL_M}m of dropoff_a (independent — drop() không di chuyển robot)
@@ -288,6 +310,8 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
     if REPORT_OUT.exists():
         existing = REPORT_OUT.read_text()
         existing = re.sub(r'\n## Bảng C —.*', '', existing, flags=re.DOTALL)
+        # Strip trailing separators (possibly blank-line-separated) to avoid double ---
+        existing = re.sub(r'(\s*\n---)+\s*$', '', existing)
         existing = existing.rstrip("\n")
     else:
         existing = "# Eval Results — AI20K Warehouse Agent\n\n" + _BANG_AB_STUB.rstrip("\n")

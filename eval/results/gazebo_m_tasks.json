@@ -1,12 +1,12 @@
 {
-  "run_ts": "2026-06-11T15:09:49+00:00",
+  "run_ts": "2026-06-11T15:48:19+00:00",
   "tasks": [
     {
       "id": "m1",
       "goal_text": "Retrieve the pallet_jack from its storage location and deliver it to drop-off zone A (dropoff_a at coordinates 0, 0).",
       "success": true,
-      "steps": 11,
-      "elapsed_s": 30.1,
+      "steps": 10,
+      "elapsed_s": 69.4,
       "done_called": true,
       "locate_sources": [
         "gt_registry"
@@ -15,15 +15,19 @@
         "pallet_gt": "(0.00, 0.00, yaw=0.00)",
         "dist_to_dropoff_a_m": 0.0,
         "success": true,
-        "threshold_m": 1.5
+        "threshold_m": 1.5,
+        "robot_gt_pose": "(3.45, 2.15, yaw=3.14)",
+        "robot_dist_to_dropoff_a_m": 4.07,
+        "nav_success": false,
+        "nav_tol_m": 2.0
       }
     },
     {
       "id": "m2",
       "goal_text": "The pallet_jack must be transported to the central delivery point. Navigate to the pallet_jack near (-0.28, -9.48), pick it up, and bring it to dropoff_a at (0.0, 0.0).",
       "success": true,
-      "steps": 11,
-      "elapsed_s": 23.0,
+      "steps": 8,
+      "elapsed_s": 20.7,
       "done_called": true,
       "locate_sources": [
         "gt_registry"
@@ -32,7 +36,11 @@
         "pallet_gt": "(0.00, 0.00, yaw=0.00)",
         "dist_to_dropoff_a_m": 0.0,
         "success": true,
-        "threshold_m": 1.5
+        "threshold_m": 1.5,
+        "robot_gt_pose": "(3.45, 2.15, yaw=3.14)",
+        "robot_dist_to_dropoff_a_m": 4.07,
+        "nav_success": false,
+        "nav_tol_m": 2.0
       }
     },
     {
@@ -40,16 +48,18 @@
       "goal_text": "Lấy pallet_jack từ vị trí lưu trữ (gần tọa độ -0.28, -9.48) và giao đến khu vực dropoff_a (0.0, 0.0). Xác nhận hoàn thành bằng oracle_check.",
       "success": true,
       "steps": 8,
-      "elapsed_s": 15.9,
+      "elapsed_s": 35.0,
       "done_called": true,
-      "locate_sources": [
-        "gt_registry"
-      ],
+      "locate_sources": [],
       "oracle": {
         "pallet_gt": "(0.00, 0.00, yaw=0.00)",
         "dist_to_dropoff_a_m": 0.0,
         "success": true,
-        "threshold_m": 1.5
+        "threshold_m": 1.5,
+        "robot_gt_pose": "(3.45, 2.15, yaw=3.14)",
+        "robot_dist_to_dropoff_a_m": 4.07,
+        "nav_success": false,
+        "nav_tol_m": 2.0
       }
     }
   ]
