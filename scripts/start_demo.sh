@@ -1,119 +1,113 @@
 #!/usr/bin/env bash
 # start_demo.sh — Cold-start the full Máy B demo stack.
 #
-# Starts all layers in the correct order and waits for each to become ready
-# before starting the next. Target: demo-ready in < 5 minutes from a cold boot.
+# Two workspaces:
+#   ~/colcon_ws         — warehouse_nav (forklift SDF, bridge, Nav2 AMCL) — REAL stack
+#   ~/AI20K/colcon_ws   — warehouse_robot_agent (agent, backends, perception)
 #
 # Usage:
-#   ./scripts/start_demo.sh           # normal start
-#   ./scripts/start_demo.sh --headless  # no Gazebo GUI (GPU-less mode)
+#   ./scripts/start_demo.sh              # headless (default — no GUI window)
+#   ./scripts/start_demo.sh --gui        # open Gazebo GUI window
 #
-# Creates a tmux session named "demo" with one window per layer.
-# To attach: tmux attach -t demo
-# To kill:   tmux kill-session -t demo
+# Creates a tmux session named "demo". One window runs the full sim+nav stack;
+# the agent is launched separately by the operator.
+#
+# To attach:  tmux attach -t demo
+# To kill:    tmux kill-session -t demo
+# Cleanup:    bash ~/colcon_ws/kill_ros.sh
 
-set -euo pipefail
+set -eo pipefail   # -u removed: colcon setup.bash references COLCON_TRACE without default
 
-HEADLESS=${1:-""}
-WS="$HOME/AI20K/colcon_ws"
+HEADLESS="true"
+[[ "${1:-}" == "--gui" ]] && HEADLESS="false"
+
+NAV_WS="$HOME/colcon_ws"
+AGENT_WS="$HOME/AI20K/colcon_ws"
 SESSION="demo"
-TIMEOUT=300   # max seconds to wait for full stack
+TIMEOUT=300
 
 _log() { echo "[start_demo] $*"; }
 _ok()  { echo "[start_demo] ✓ $*"; }
-_err() { echo "[start_demo] ✗ $*" >&2; }
+_err() { echo "[start_demo] ✗ $*" >&2; exit 1; }
 
-# ── source workspace ─────────────────────────────────────────────────────── #
-if [[ ! -f "$WS/install/setup.bash" ]]; then
-    _err "Workspace not built: $WS/install/setup.bash not found"
-    _err "Run: cd $WS && colcon build"
-    exit 1
-fi
-set +u; source "$WS/install/setup.bash"; set -u
+# ── preflight checks ──────────────────────────────────────────────────────── #
+[[ -f "$NAV_WS/install/setup.bash"   ]] || _err "Nav workspace not built: $NAV_WS/install/setup.bash missing. Run: cd $NAV_WS && colcon build"
+[[ -f "$AGENT_WS/install/setup.bash" ]] || _err "Agent workspace not built: $AGENT_WS/install/setup.bash missing. Run: cd $AGENT_WS && colcon build"
+which tmux &>/dev/null                  || _err "tmux not found: sudo apt install -y tmux"
 
-# ── kill any leftover processes ───────────────────────────────────────────── #
-_log "Killing leftover ROS/Gazebo processes …"
-pkill -f "gz sim"        2>/dev/null || true
-pkill -f "ros2 launch"   2>/dev/null || true
-pkill -f "ros2 run"      2>/dev/null || true
-pkill -f "foxglove"      2>/dev/null || true
-sleep 2
+# ── source both workspaces (agent overlays nav) ───────────────────────────── #
+source "$NAV_WS/install/setup.bash"
+source "$AGENT_WS/install/setup.bash"
 
-# ── tmux session ─────────────────────────────────────────────────────────── #
+# ── clean up leftover processes ───────────────────────────────────────────── #
+_log "Cleaning up leftover processes …"
+bash "$NAV_WS/kill_ros.sh" 2>/dev/null || true
+sleep 1
+
+# ── tmux session ──────────────────────────────────────────────────────────── #
 tmux kill-session -t "$SESSION" 2>/dev/null || true
-tmux new-session  -d -s "$SESSION" -x 220 -y 50
+tmux new-session -d -s "$SESSION" -x 220 -y 50
 
-# Helper: run a command in a named tmux window
+# Helper: open a new tmux window, source both workspaces, run command
 _tmux_window() {
     local name="$1"; shift
     tmux new-window -t "$SESSION" -n "$name"
-    tmux send-keys -t "$SESSION:$name" "source $WS/install/setup.bash && $*" Enter
+    tmux send-keys -t "$SESSION:$name" \
+        "source $NAV_WS/install/setup.bash && source $AGENT_WS/install/setup.bash && $*" \
+        Enter
 }
 
-# ── Layer 3: Gazebo + AWS world ───────────────────────────────────────────── #
-_log "Starting Gazebo + AWS warehouse world …"
-GZ_ARGS=""
-[[ "$HEADLESS" == "--headless" ]] && GZ_ARGS="headless:=true"
-_tmux_window "gazebo" \
-    "ros2 launch aws_robomaker_small_warehouse_world small_warehouse.launch.py $GZ_ARGS"
+# ── Layer 1: sim + robot + Nav2 + foxglove (one launch) ──────────────────── #
+_log "Starting Gazebo + forklift + Nav2 + foxglove …"
+_tmux_window "sim" \
+    "ros2 launch warehouse_nav warehouse_sim.launch.py \
+     robot_type:=forklift \
+     headless:=$HEADLESS \
+     use_foxglove:=true"
 
-_log "Waiting for Gazebo model list …"
+# ── wait: robot odom (proves forklift spawned + bridge running) ───────────── #
+_log "Waiting for /odom (forklift spawned + bridge ready) …"
 T0=$SECONDS
-until gz model --list 2>/dev/null | grep -q "PalletJack\|warehouse"; do
+until ros2 topic list 2>/dev/null | grep -q "^/odom$"; do
     if (( SECONDS - T0 > 90 )); then
-        _err "Gazebo did not become ready in 90 s"
-        exit 1
+        _err "Forklift /odom not seen in 90 s — check tmux window 'sim'"
     fi
     sleep 2
 done
-_ok "Gazebo ready ($(( SECONDS - T0 )) s)"
+_ok "/odom present ($(( SECONDS - T0 )) s)"
 
-# ── Layer 3b: Nav2 ────────────────────────────────────────────────────────── #
-_log "Starting Nav2 …"
-_tmux_window "nav2" \
-    "ros2 launch nav2_bringup navigation_launch.py use_sim_time:=true \
-     map:=$WS/src/aws-robomaker-small-warehouse-world/maps/005/map.yaml"
-
-_log "Waiting for Nav2 action server …"
+# ── wait: Nav2 action server ──────────────────────────────────────────────── #
+_log "Waiting for Nav2 navigate_to_pose …"
 T0=$SECONDS
 until ros2 action list 2>/dev/null | grep -q "navigate_to_pose"; do
-    if (( SECONDS - T0 > 60 )); then
-        _err "Nav2 did not become ready in 60 s"
-        exit 1
+    if (( SECONDS - T0 > 90 )); then
+        _err "Nav2 navigate_to_pose not seen in 90 s — check tmux window 'sim'"
     fi
     sleep 2
 done
 _ok "Nav2 ready ($(( SECONDS - T0 )) s)"
 
-# ── Layer 3c: Perception node ─────────────────────────────────────────────── #
-_log "Starting perception node …"
-_tmux_window "perception" \
-    "ros2 run warehouse_robot_agent perception_node"
-sleep 3
-
-# ── Layer 1: foxglove_bridge ──────────────────────────────────────────────── #
-_log "Starting foxglove_bridge …"
-_tmux_window "foxglove" \
-    "ros2 launch foxglove_bridge foxglove_bridge_launch.xml"
-
+# ── wait: foxglove port 8765 ──────────────────────────────────────────────── #
 _log "Waiting for foxglove_bridge port 8765 …"
 T0=$SECONDS
 until nc -z localhost 8765 2>/dev/null; do
-    if (( SECONDS - T0 > 20 )); then
-        _err "foxglove_bridge did not open port 8765 in 20 s"
-        exit 1
+    if (( SECONDS - T0 > 30 )); then
+        _err "foxglove_bridge port 8765 not open in 30 s"
     fi
     sleep 1
 done
 _ok "foxglove_bridge ready ($(( SECONDS - T0 )) s)"
 
-# ── Summary ───────────────────────────────────────────────────────────────── #
+# ── summary ───────────────────────────────────────────────────────────────── #
 TOTAL=$(( SECONDS ))
 _ok "Full stack ready in ${TOTAL} s"
 echo ""
-echo "  tmux session : tmux attach -t $SESSION"
-echo "  Foxglove     : open app.foxglove.dev → ws://localhost:8765"
-echo "  Layout       : Foxglove → Layouts → Import → foxglove/warehouse_demo.json"
-echo "  Tunnel (ext) : bash scripts/start_tunnel.sh    # expose 8765 via cloudflared/ngrok"
-echo "  Run agent    : ros2 run warehouse_robot_agent llm_agent"
-echo "  Run eval     : python3 eval/run_eval_gazebo.py"
+echo "  tmux              : tmux attach -t $SESSION  (window: sim)"
+echo "  Foxglove          : app.foxglove.dev → ws://localhost:8765"
+echo "  Layout            : Foxglove → Layouts → Import → foxglove/warehouse_demo.json"
+echo "  Tunnel (external) : bash scripts/start_tunnel.sh"
+echo ""
+echo "  Run 1 task (local): LLM_PROVIDER=ollama WORLD_BACKEND=gazebo \\"
+echo "                        ros2 run warehouse_robot_agent llm_agent"
+echo "  Run eval Bảng C   : LLM_PROVIDER=ollama python3 eval/run_eval_gazebo.py"
+echo "  Run parity B3(b)  : LLM_PROVIDER=ollama python3 eval/parity_check.py --live-gazebo"

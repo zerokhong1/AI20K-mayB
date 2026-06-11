@@ -41,6 +41,27 @@ Lý do: hardcoded K → detection sai pose → eval sai → không phát hiện 
 
 Mỗi chỗ dùng ground-truth thay sensor thật: ghi rõ `source` trong JSON output và trong báo cáo. Không để `"source": "armbench_depth"` khi thực tế đang dùng `gz_gt`.
 
+### Q5 — HAI workspace, không nhầm (P0 chặn F5 — phát hiện 2026-06-11)
+
+Repo AI20K có **hai workspace khác nhau** với hai vai trò khác nhau:
+
+| Workspace | Vai trò | Chứa gì |
+|-----------|---------|---------|
+| `~/colcon_ws` | **Stack sim thật** — phải chạy trước | `warehouse_nav` (forklift SDF, forklift_bridge.yaml, Nav2 AMCL params, kill_ros.sh) |
+| `~/AI20K/colcon_ws` | **Agent code** — overlay lên nav WS | `warehouse_robot_agent` (agent, backends, perception) |
+
+`start_demo.sh` đã sửa (commit 4495be2+) để source cả hai, launch đúng:
+```bash
+ros2 launch warehouse_nav warehouse_sim.launch.py robot_type:=forklift use_foxglove:=true
+```
+
+**Test falsify nhanh:** `bash scripts/start_demo.sh` → `ros2 topic list | grep /odom`
+Nếu không thấy `/odom` = robot chưa spawn = stack chưa chạy.
+
+Lịch sử lỗi: `start_demo.sh` cũ source sai workspace + launch world-only (không spawn robot).
+Stack thật chạy bằng `warehouse_sim.launch.py` trong `~/colcon_ws` — ghi tay ở `pkill.md`.
+Suốt nhiều vòng review code "đọc thấy đúng" nhưng không có raw output — chính vì stack chưa bao giờ chạy từ repo.
+
 ---
 
 ## ⚠️ Điểm mấu chốt
