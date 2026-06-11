@@ -62,6 +62,23 @@ Lịch sử lỗi: `start_demo.sh` cũ source sai workspace + launch world-only 
 Stack thật chạy bằng `warehouse_sim.launch.py` trong `~/colcon_ws` — ghi tay ở `pkill.md`.
 Suốt nhiều vòng review code "đọc thấy đúng" nhưng không có raw output — chính vì stack chưa bao giờ chạy từ repo.
 
+### Q6 — warehouse_nav phải vào repo trước khi nộp (P0 nộp)
+
+**Trạng thái:** `~/colcon_ws/src/warehouse_nav` tồn tại trên đĩa máy B nhưng **chưa commit vào repo**.
+Clone sạch repo → `start_demo.sh` fail ngay preflight (`~/colcon_ws/install/setup.bash missing`).
+Giám khảo không dựng được gì.
+
+Các file chưa trong repo (vô hình với agent review + vô hình với bài nộp):
+- `warehouse_nav/models/warehouse_forklift/model.sdf`
+- `warehouse_nav/urdf/warehouse_forklift.urdf`
+- `warehouse_nav/config/forklift_bridge.yaml`
+- `warehouse_nav/launch/warehouse_sim.launch.py`
+- `colcon_ws/kill_ros.sh`
+
+**Việc cần làm (trước nộp, không phải stretch):**
+Chuyển `~/colcon_ws/src/warehouse_nav` vào `~/AI20K/colcon_ws/src/warehouse_nav` → commit → repo tự chứa.
+`start_demo.sh` header comment cũng cần cập nhật (bỏ dòng `~/colcon_ws — REAL stack ngoài repo`).
+
 ---
 
 ## ⚠️ Điểm mấu chốt
