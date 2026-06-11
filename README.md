@@ -107,7 +107,7 @@ bash ~/AI20K/scripts/start_tunnel.sh
 | Item | Reality |
 |------|---------|
 | GazeboBackend | Physics simulation (Gazebo Harmonic) — not a physical robot |
-| LLM Agent (mayB) | Gemini flash-lite (`gemini-2.0-flash-lite`) via `google-genai` SDK. Same model as official BTC eval; different runner (`llm_agent.py` direct, not LangGraph). |
+| LLM Agent (mayB) | Gemini flash-lite (`gemini-flash-lite-latest`) via `google-genai` SDK. Same model as official BTC eval; different runner (`llm_agent.py` direct, not LangGraph). |
 | `locate_object` in Gazebo | Ground-truth pose from `gz model` (default). ARMBench depth detector hook integrated but model weights not yet trained — see [DISCLOSURE_armbench.md](DISCLOSURE_armbench.md). |
 | Bảng 2D-ref | mayB-internal parity test on Flat2DBackend with scripted agent. NOT the official P0.1 Bảng A/B. |
 | Bảng C purpose | Evidence that the sim→real pathway works; same WorldBackend interface, swapped backend. Bonus track only. |

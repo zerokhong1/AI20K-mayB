@@ -188,7 +188,9 @@ def dispatch(backend, name: str, inp: dict) -> str:
 
 # ─────────────────────────── agent loop ───────────────────────────────────── #
 
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash-lite")
+# Model string must match the BTC sprint plan ("gemini-flash-lite-latest").
+# Override with GEMINI_MODEL if the string is wrong for your API region.
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 
 SYSTEM_PROMPT = """You are a warehouse logistics agent controlling a forklift robot
 inside a Gazebo Harmonic simulation of an AWS small warehouse.
@@ -223,6 +225,7 @@ def run_agent(
     backend,
     goal_text: str | None = None,
     system_prompt: str | None = None,
+    temperature: float = 0.0,
 ) -> dict:
     """Run the LLM tool-calling loop for one task.
 
@@ -247,6 +250,7 @@ def run_agent(
         system_instruction=(system_prompt or SYSTEM_PROMPT),
         tools=_gemini_tools(),
         automatic_function_calling=gtypes.AutomaticFunctionCallingConfig(disable=True),
+        temperature=temperature,   # 0.0 = deterministic; parity runs use T=0
     )
 
     chat = client.chats.create(model=GEMINI_MODEL, config=config)

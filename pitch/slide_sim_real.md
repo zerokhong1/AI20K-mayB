@@ -93,7 +93,7 @@ Cùng 1 goal: *"Retrieve pallet_jack → deliver to dropoff_a"*
 > Bảng A/B official chạy ở repo BTC (LangGraph + Gemini flash-lite) — tách biệt."
 
 **"Agent ở đây là model gì?"**
-> "Agent trong repo mayB dùng Gemini flash-lite (`gemini-2.0-flash-lite`) — cùng model với official.  
+> "Agent trong repo mayB dùng Gemini flash-lite (`gemini-flash-lite-latest`) — cùng model với official.  
 > Khác biệt: repo mayB dùng `llm_agent.py` trực tiếp; repo BTC dùng LangGraph.  
 > Cùng model, cùng tool schema, cùng WorldBackend interface — đổi backend là đổi sim environment."
 

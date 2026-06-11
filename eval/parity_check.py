@@ -2,18 +2,26 @@
 """
 Parity check — "1 agent, 2 backends".
 
-Runs the same goal_text through BOTH backends and compares the resulting
-tool-call sequences. Saves two trace files side-by-side as evidence.
+Modes and what each proves
+──────────────────────────
+  --both-flat2d   VARIANCE BASELINE (no ROS). Runs the same LLM agent twice on
+                  Flat2DBackend at T=0. Since backend + model + goal are identical,
+                  both traces MUST be identical — any divergence is a model-side
+                  problem. Does NOT prove B3(b); it proves the agent is deterministic.
 
-Modes
-─────
-  --live        Run flat2d now; load existing Gazebo trace from JSON file.
-                (Default when Gazebo/ROS is not available.)
+  --live-gazebo   REAL B3(b) PARITY ARTIFACT. Runs flat2d AND live Gazebo in the
+                  same session, same goal, same model (T=0). Produces two real traces
+                  side-by-side. This is the evidence for "1 agent, 2 backends, 0
+                  agent code changes". Requires full ROS+Gazebo stack running.
 
-  --both-flat2d Run both backends using Flat2DBackend only — instant, no ROS.
-                Useful for CI and development without the full Gazebo stack.
+  --live          Flat2d run + load existing Gazebo trace from a previous --live-gazebo
+                  run. Use when you have a Gazebo trace but want to refresh the 2D side.
 
-  --live-gazebo  Run flat2d AND the live Gazebo backend (needs ROS running).
+Comparison
+──────────
+  Tool names only (not free text). With T=0, same-backend runs should be
+  100% identical. Cross-backend (flat2d ↔ Gazebo) similarity ≥ 80% is expected
+  (Gazebo may add Nav2 retry calls; flat2d does not).
 
 Outputs
 ───────
@@ -23,15 +31,15 @@ Outputs
 
 Usage
 ─────
-  # Compare against a previously saved Gazebo trace:
-  python3 eval/parity_check.py --live \\
+  # Variance baseline (offline, no key needed for scripted; key needed for LLM):
+  GEMINI_API_KEY=... python3 eval/parity_check.py --both-flat2d
+
+  # Real B3(b) (Gazebo stack must be running):
+  GEMINI_API_KEY=... python3 eval/parity_check.py --live-gazebo
+
+  # Flat2d now + existing Gazebo trace:
+  GEMINI_API_KEY=... python3 eval/parity_check.py --live \\
       --gazebo-trace eval/results/traces/some_run_gazebo_trace.json
-
-  # Fully offline (both backends in-process):
-  python3 eval/parity_check.py --both-flat2d
-
-  # Live Gazebo (ROS must be running):
-  python3 eval/parity_check.py --live-gazebo
 """
 
 import argparse
@@ -242,10 +250,11 @@ def write_parity_report(run_id: str, goal_text: str, cmp: dict,
 
 # ──────────────────────────────────────────────── runners ─────────────────── #
 
-def run_flat2d(goal_text: str, run_id: str, run_ts: str) -> tuple[dict, Path]:
-    print("\n[parity] ── Running flat2d backend ──")
+def run_flat2d(goal_text: str, run_id: str, run_ts: str,
+               temperature: float = 0.0) -> tuple[dict, Path]:
+    print("\n[parity] ── Running flat2d backend (T=0) ──")
     backend = Flat2DBackend()
-    metrics = run_agent(backend, goal_text=goal_text)
+    metrics = run_agent(backend, goal_text=goal_text, temperature=temperature)
     path = save_trace(run_id, "flat2d", goal_text, metrics, run_ts)
     # Build the trace payload in the same shape as load_trace() returns
     trace_data = {
@@ -257,8 +266,9 @@ def run_flat2d(goal_text: str, run_id: str, run_ts: str) -> tuple[dict, Path]:
     return trace_data, path
 
 
-def run_gazebo_live(goal_text: str, run_id: str, run_ts: str) -> tuple[dict, Path]:
-    print("\n[parity] ── Running Gazebo backend (live) ──")
+def run_gazebo_live(goal_text: str, run_id: str, run_ts: str,
+                    temperature: float = 0.0) -> tuple[dict, Path]:
+    print("\n[parity] ── Running Gazebo backend (live, T=0) ── [B3(b) artifact]")
     rclpy.init()
     node    = GazeboBackendNode()
     backend = GazeboBackend(node)
@@ -268,7 +278,7 @@ def run_gazebo_live(goal_text: str, run_id: str, run_ts: str) -> tuple[dict, Pat
         print("[parity] WARNING: No pose — is the sim running?")
 
     try:
-        metrics = run_agent(backend, goal_text=goal_text)
+        metrics = run_agent(backend, goal_text=goal_text, temperature=temperature)
     finally:
         node.destroy_node()
         rclpy.shutdown()
@@ -314,14 +324,15 @@ def main():
         if not ROS_AVAILABLE:
             print("[parity] ERROR: --live-gazebo requires rclpy. Source the workspace first.")
             sys.exit(1)
-        t2d, p2d = run_flat2d(goal_text, run_id, run_ts)
-        tgz, pgz = run_gazebo_live(goal_text, run_id, run_ts)
+        print("[parity] ✓ B3(b) parity mode (flat2d ↔ Gazebo, T=0).")
+        t2d, p2d = run_flat2d(goal_text, run_id, run_ts, temperature=0.0)
+        tgz, pgz = run_gazebo_live(goal_text, run_id, run_ts, temperature=0.0)
 
     elif args.live:
         if not args.gazebo_trace:
             print("[parity] ERROR: --live requires --gazebo-trace <file>")
             sys.exit(1)
-        t2d, p2d = run_flat2d(goal_text, run_id, run_ts)
+        t2d, p2d = run_flat2d(goal_text, run_id, run_ts, temperature=0.0)
         tgz = load_trace(args.gazebo_trace)
         pgz = Path(args.gazebo_trace)
         # Also copy the gazebo trace into the traces dir under this run_id
@@ -331,32 +342,42 @@ def main():
         pgz = dest
 
     else:
-        # Default / --both-flat2d: run flat2d twice (same goal, fresh backends)
+        # --both-flat2d: VARIANCE BASELINE only.
+        # Runs LLM agent twice on the same Flat2DBackend at T=0.
+        # Expected result: IDENTICAL tool sequences (deterministic model+backend).
+        # Any divergence = model-side nondeterminism, NOT backend parity evidence.
+        # Real B3(b) parity artifact = --live-gazebo.
         if not args.both_flat2d:
             print("[parity] No mode specified — defaulting to --both-flat2d")
-        print("[parity] Running flat2d as 'backend_A' (proxy for 2D Máy A) …")
-        t2d, p2d = run_flat2d(goal_text, run_id + "_A", run_ts)
-        p2d = p2d.with_name(p2d.name.replace("_A_flat2d", "_flat2d"))
-        p2d.parent.mkdir(parents=True, exist_ok=True)
+        print("[parity] ⚠ VARIANCE BASELINE mode (flat2d × 2, T=0). NOT B3(b) parity.")
+        print("[parity] For real B3(b) (flat2d ↔ Gazebo): use --live-gazebo with live stack.")
+        print()
+        print("[parity] Run 1/2: flat2d …")
+        t2d, p2d = run_flat2d(goal_text, run_id + "_r1", run_ts)
 
-        print("[parity] Running flat2d as 'backend_B' (proxy for Gazebo) …")
-        t_b, p_b = run_flat2d(goal_text, run_id + "_B", run_ts)
-        # Rename to 'gazebo' label for the report
-        pgz = TRACES_DIR / f"{run_id}_gazebo_trace.json"
-        pgz.write_text(json.dumps({**t_b, "backend": "gazebo(flat2d-proxy)"},
+        print("[parity] Run 2/2: flat2d (variance check) …")
+        t_b, p_b = run_flat2d(goal_text, run_id + "_r2", run_ts)
+        pgz = TRACES_DIR / f"{run_id}_flat2d_r2_trace.json"
+        pgz.write_text(json.dumps({**t_b, "backend": "flat2d-run2(variance)"},
                                   indent=2, ensure_ascii=False))
-        tgz = {**t_b, "backend": "gazebo(flat2d-proxy)"}
+        tgz = {**t_b, "backend": "flat2d-run2(variance)"}
 
-        p2d = TRACES_DIR / f"{run_id}_flat2d_trace.json"
+        p2d = TRACES_DIR / f"{run_id}_flat2d_r1_trace.json"
         p2d.write_text(json.dumps(t2d, indent=2, ensure_ascii=False))
 
     # ── compare & report ───────────────────────────────────────────────── #
     cmp = compare_traces(t2d, tgz)
 
+    is_variance = args.both_flat2d or (not args.live_gazebo and not args.live)
+    mode_label = "VARIANCE BASELINE (flat2d×2)" if is_variance else "B3(b) PARITY (flat2d↔Gazebo)"
+
     print(f"\n[parity] ══════════════════════════════")
+    print(f"[parity] mode            : {mode_label}")
     print(f"[parity] flat2d sequence : {' → '.join(cmp['seq_2d'])}")
-    print(f"[parity] gazebo sequence : {' → '.join(cmp['seq_gz'])}")
+    print(f"[parity] other sequence  : {' → '.join(cmp['seq_gz'])}")
     print(f"[parity] LCS / similarity: {cmp['lcs_length']} / {cmp['seq_sim_pct']}%")
+    if is_variance and cmp['seq_sim_pct'] < 100.0:
+        print(f"[parity] ⚠ VARIANCE DIVERGENCE at T=0 — investigate before claiming parity")
 
     write_parity_report(run_id, goal_text, cmp, p2d, pgz, run_ts)
 
