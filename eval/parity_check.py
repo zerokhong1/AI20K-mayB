@@ -180,24 +180,39 @@ def _lcs_alignment(a: list[str], b: list[str]) -> list[tuple[str | None, str | N
 
 
 def write_parity_report(run_id: str, goal_text: str, cmp: dict,
-                        path_2d: Path, path_gz: Path, run_ts: str) -> Path:
+                        path_2d: Path, path_gz: Path, run_ts: str,
+                        run2_label: str = "gazebo") -> Path:
+    """Write a side-by-side parity report.
+
+    run2_label: human-readable name for the second run.
+      "gazebo"                — B3(b) parity artifact (--live-gazebo / --live)
+      "flat2d run2 (variance)" — variance baseline (--both-flat2d)
+    """
     TRACES_DIR.mkdir(parents=True, exist_ok=True)
     out = TRACES_DIR / f"{run_id}_parity.md"
 
     def _fmt_seq(seq: list[str]) -> str:
         return " → ".join(seq) if seq else "*(empty)*"
 
+    is_variance = run2_label != "gazebo"
+    mode_note = (
+        "⚠ VARIANCE BASELINE — does NOT prove B3(b); proves agent is deterministic at T=0."
+        if is_variance else
+        "✓ B3(b) PARITY ARTIFACT — same goal, same model (T=0), flat2d ↔ Gazebo."
+    )
+
     # Side-by-side table using LCS alignment (shows true insertions/deletions)
     alignment = _lcs_alignment(cmp["seq_2d"], cmp["seq_gz"])
     table_rows = ""
     row = 1
+    plus_run2 = f"＋{run2_label.split()[0]}"  # e.g. "＋flat2d" or "＋gazebo"
     for a_tool, b_tool in alignment:
         t2  = f"`{a_tool}`" if a_tool else "—"
         tgz = f"`{b_tool}`" if b_tool else "—"
         if a_tool is None:
-            mark = "＋gz"    # extra call in Gazebo
+            mark = plus_run2     # extra call in run2
         elif b_tool is None:
-            mark = "＋2d"    # extra call in flat2d
+            mark = "＋2d"        # extra call in flat2d run1
         else:
             mark = "✓"
         table_rows += f"| {row} | {t2} | {tgz} | {mark} |\n"
@@ -207,6 +222,7 @@ def write_parity_report(run_id: str, goal_text: str, cmp: dict,
 # Parity Check — 1 agent, 2 backends
 
 > Run: {run_ts}
+> Mode: {mode_note}
 > Goal: *{goal_text}*
 
 ## Summary
@@ -214,29 +230,29 @@ def write_parity_report(run_id: str, goal_text: str, cmp: dict,
 | Metric | Value |
 |--------|-------|
 | Flat2D steps | {cmp['len_2d']} |
-| Gazebo steps | {cmp['len_gz']} |
+| {run2_label} steps | {cmp['len_gz']} |
 | LCS length | {cmp['lcs_length']} |
 | Sequence similarity | **{cmp['seq_sim_pct']}%** |
 | Flat2D done() called | {cmp['success_2d']} |
-| Gazebo done() called | {cmp['success_gz']} |
+| {run2_label} done() called | {cmp['success_gz']} |
 
 ## Tool-call sequence (flat2d)
 
 `{_fmt_seq(cmp['seq_2d'])}`
 
-## Tool-call sequence (gazebo)
+## Tool-call sequence ({run2_label})
 
 `{_fmt_seq(cmp['seq_gz'])}`
 
 ## Side-by-side comparison
 
-| # | flat2d | gazebo | match |
-|---|--------|--------|-------|
+| # | flat2d | {run2_label} | match |
+|---|--------|{'-' * len(run2_label)}|-------|
 {table_rows}
 ## Evidence files
 
 - Flat2D trace: `{path_2d.name}`
-- Gazebo trace: `{path_gz.name}`
+- {run2_label.capitalize()} trace: `{path_gz.name}`
 
 > **Interpretation:** Sequence similarity ≥ 80% indicates the agent uses the same
 > reasoning strategy regardless of backend. Differences arise from backend-specific
@@ -379,7 +395,8 @@ def main():
     if is_variance and cmp['seq_sim_pct'] < 100.0:
         print(f"[parity] ⚠ VARIANCE DIVERGENCE at T=0 — investigate before claiming parity")
 
-    write_parity_report(run_id, goal_text, cmp, p2d, pgz, run_ts)
+    run2_label = "flat2d run2 (variance)" if is_variance else "gazebo"
+    write_parity_report(run_id, goal_text, cmp, p2d, pgz, run_ts, run2_label=run2_label)
 
 
 if __name__ == "__main__":
