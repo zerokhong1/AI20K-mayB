@@ -2,8 +2,7 @@
 colcon_ws/build
 colcon_ws/install
 colcon_ws/log
-# Embedded repo — track as submodule separately
-colcon_ws/src/aws-robomaker-small-warehouse-world
+# aws-robomaker-small-warehouse-world vendored directly (has local modifications — not suitable as submodule)
 # Python
 **/__pycache__
 *.pyc

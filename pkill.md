@@ -17,4 +17,4 @@ ps aux | grep -E "gz|ros2" | grep -v grep
 # Tóm tắt lệnh để chạy lần sau
 
 
-bash ~/colcon_ws/kill_ros.sh && ros2 launch warehouse_nav warehouse_sim.launch.py robot_type:=forklift headless:=false
+bash scripts/kill_ros.sh && ros2 launch warehouse_nav warehouse_sim.launch.py robot_type:=forklift headless:=false

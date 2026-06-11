@@ -1,28 +1,23 @@
 #!/usr/bin/env bash
-# start_demo.sh — Cold-start the full Máy B demo stack.
+# start_demo.sh — Cold-start the full demo stack from the repo root.
 #
-# Two workspaces:
-#   ~/colcon_ws         — warehouse_nav (forklift SDF, bridge, Nav2 AMCL) — REAL stack
-#   ~/AI20K/colcon_ws   — warehouse_robot_agent (agent, backends, perception)
+# Single workspace: <repo>/colcon_ws  (warehouse_nav + warehouse_robot_agent + aws world)
 #
 # Usage:
-#   ./scripts/start_demo.sh              # headless (default — no GUI window)
+#   ./scripts/start_demo.sh              # headless (default)
 #   ./scripts/start_demo.sh --gui        # open Gazebo GUI window
 #
-# Creates a tmux session named "demo". One window runs the full sim+nav stack;
-# the agent is launched separately by the operator.
-#
-# To attach:  tmux attach -t demo
-# To kill:    tmux kill-session -t demo
-# Cleanup:    bash ~/colcon_ws/kill_ros.sh
+# Creates a tmux session named "demo". Attach: tmux attach -t demo
+# Kill:   tmux kill-session -t demo
+# Cleanup: bash scripts/kill_ros.sh
 
 set -eo pipefail   # -u removed: colcon setup.bash references COLCON_TRACE without default
 
 HEADLESS="true"
 [[ "${1:-}" == "--gui" ]] && HEADLESS="false"
 
-NAV_WS="$HOME/colcon_ws"
-AGENT_WS="$HOME/AI20K/colcon_ws"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WS="$REPO_ROOT/colcon_ws"
 SESSION="demo"
 TIMEOUT=300
 
@@ -31,29 +26,27 @@ _ok()  { echo "[start_demo] ✓ $*"; }
 _err() { echo "[start_demo] ✗ $*" >&2; exit 1; }
 
 # ── preflight checks ──────────────────────────────────────────────────────── #
-[[ -f "$NAV_WS/install/setup.bash"   ]] || _err "Nav workspace not built: $NAV_WS/install/setup.bash missing. Run: cd $NAV_WS && colcon build"
-[[ -f "$AGENT_WS/install/setup.bash" ]] || _err "Agent workspace not built: $AGENT_WS/install/setup.bash missing. Run: cd $AGENT_WS && colcon build"
-which tmux &>/dev/null                  || _err "tmux not found: sudo apt install -y tmux"
+[[ -f "$WS/install/setup.bash" ]] || _err "Workspace not built: $WS/install/setup.bash missing. Run: cd $WS && colcon build"
+which tmux &>/dev/null             || _err "tmux not found: sudo apt install -y tmux"
 
-# ── source both workspaces (agent overlays nav) ───────────────────────────── #
-source "$NAV_WS/install/setup.bash"
-source "$AGENT_WS/install/setup.bash"
+# ── source workspace ─────────────────────────────────────────────────────── #
+source "$WS/install/setup.bash"
 
 # ── clean up leftover processes ───────────────────────────────────────────── #
 _log "Cleaning up leftover processes …"
-bash "$NAV_WS/kill_ros.sh" 2>/dev/null || true
+bash "$REPO_ROOT/scripts/kill_ros.sh" 2>/dev/null || true
 sleep 1
 
 # ── tmux session ──────────────────────────────────────────────────────────── #
 tmux kill-session -t "$SESSION" 2>/dev/null || true
 tmux new-session -d -s "$SESSION" -x 220 -y 50
 
-# Helper: open a new tmux window, source both workspaces, run command
+# Helper: open a new tmux window, source workspace, run command
 _tmux_window() {
     local name="$1"; shift
     tmux new-window -t "$SESSION" -n "$name"
     tmux send-keys -t "$SESSION:$name" \
-        "source $NAV_WS/install/setup.bash && source $AGENT_WS/install/setup.bash && $*" \
+        "source $WS/install/setup.bash && $*" \
         Enter
 }
 
