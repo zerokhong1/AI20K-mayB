@@ -189,6 +189,48 @@ def _ollama_tools() -> list[dict]:
     ]
 
 
+def _parse_text_tool_calls(text: str) -> list[dict]:
+    """Fallback: extract tool calls from model text when tool_calls[] is empty.
+
+    qwen2.5:7b sometimes emits calls as text even with tool_choice='required':
+      <tool_call>{"name": "pick", "arguments": {"object_name": "pallet_jack"}}</tool_call>
+    or bare JSON with "name"/"arguments" keys.
+    """
+    import re
+    results = []
+    # Try <tool_call> blocks first
+    for block in re.findall(r'<tool_call>\s*(.*?)\s*(?:</tool_call>|$)', text, re.DOTALL):
+        try:
+            obj = json.loads(block.strip())
+            if "name" in obj and "arguments" in obj:
+                results.append({
+                    "function": {
+                        "name": obj["name"],
+                        "arguments": json.dumps(obj["arguments"]),
+                    },
+                    "id": f"text_{len(results)}",
+                })
+        except Exception:
+            pass
+    if results:
+        return results
+    # Try bare top-level JSON objects with name+arguments
+    for m in re.finditer(r'(\{(?:[^{}]|\{[^{}]*\})*\})', text):
+        try:
+            obj = json.loads(m.group(1))
+            if isinstance(obj, dict) and "name" in obj and "arguments" in obj:
+                results.append({
+                    "function": {
+                        "name": obj["name"],
+                        "arguments": json.dumps(obj["arguments"]),
+                    },
+                    "id": f"text_{len(results)}",
+                })
+        except Exception:
+            pass
+    return results
+
+
 def _run_agent_ollama(
     backend,
     goal_text: str,
@@ -237,6 +279,10 @@ def _run_agent_ollama(
             print(f"[agent] Assistant: {msg['content']}")
 
         tool_calls = msg.get("tool_calls") or []
+        if not tool_calls and msg.get("content"):
+            tool_calls = _parse_text_tool_calls(msg["content"])
+            if tool_calls:
+                print(f"[agent] ⚠ text-fallback parsed {len(tool_calls)} tool call(s) from content")
         if not tool_calls:
             print(f"[agent] No tool calls — finish_reason={reason}")
             break
@@ -293,7 +339,7 @@ def dispatch(backend, name: str, inp: dict) -> str:
             "map_info":   view.map_info,
         })
     elif name == "locate_object":
-        pose = backend.locate_object(inp["name"])
+        pose = backend.locate_object(inp.get("name") or inp.get("object_name", ""))
         return json.dumps(None if pose is None else {"x": pose.x, "y": pose.y, "yaw": pose.yaw})
     elif name == "check_path":
         return json.dumps({"reachable": backend.check_path(float(inp["x"]), float(inp["y"]))})
