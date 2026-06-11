@@ -195,8 +195,14 @@ def _run_agent_ollama(
     system_prompt: str,
     temperature: float,
 ) -> dict:
-    """Run one task via Ollama's OpenAI-compatible tool-calling endpoint."""
-    import requests  # always available, no pip install needed
+    """Run one task via Ollama's OpenAI-compatible tool-calling endpoint.
+
+    Uses urllib.request (Python stdlib) — no pip install needed.
+    tool_choice='required' forces the model to call a tool each turn;
+    without it, small models (qwen2.5:7b) may reply in text and the
+    loop breaks at step 0.
+    """
+    import urllib.request as _ur
 
     tools    = _ollama_tools()
     url      = f"{OLLAMA_BASE_URL}/v1/chat/completions"
@@ -211,20 +217,18 @@ def _run_agent_ollama(
 
     print(f"[agent] Starting Ollama tool-calling loop ({OLLAMA_MODEL}) …")
 
-    while not done_called and step < 30:
-        resp = requests.post(
-            url,
-            json={
-                "model":       OLLAMA_MODEL,
-                "messages":    messages,
-                "tools":       tools,
-                "temperature": temperature,
-                "stream":      False,
-            },
-            timeout=120,
-        )
-        resp.raise_for_status()
-        data   = resp.json()
+    while not done_called and step < 25:
+        payload = json.dumps({
+            "model":       OLLAMA_MODEL,
+            "messages":    messages,
+            "tools":       tools,
+            "tool_choice": "required",   # force tool call; prevents text-only replies
+            "temperature": temperature,
+            "stream":      False,
+        }).encode()
+        req = _ur.Request(url, data=payload, headers={"Content-Type": "application/json"})
+        with _ur.urlopen(req, timeout=120) as r:
+            data = json.loads(r.read())
         choice = data["choices"][0]
         msg    = choice["message"]
         reason = choice.get("finish_reason", "")
@@ -319,16 +323,16 @@ inside a Gazebo Harmonic simulation of an AWS small warehouse.
 
 Available tools: perceive, locate_object, check_path, move_to, pick, drop, oracle_check, done.
 
-Map reference:
+Map reference (fixed infrastructure only — object positions must come from locate_object):
   • Robot spawns at (3.45, 2.15).
   • Warehouse spans roughly x = [-6, 7], y = [-12, 8] in map frame.
-  • pallet_jack: (-0.28, -9.48)
-  • dropoff_a: (0.0, 0.0)
-  • dropoff_b: (3.45, 2.15) — near spawn.
+  • dropoff_a: (0.0, 0.0)   — fixed drop zone
+  • dropoff_b: (3.45, 2.15) — fixed drop zone, near spawn
 
 General approach:
-  1. Call perceive() to read robot pose and world state.
-  2. Use locate_object() to confirm object positions.
+  1. Call perceive() to read robot pose and visible world state.
+  2. Call locate_object(name) to get the current pose of any warehouse object.
+     Do NOT assume object positions — always call locate_object first.
   3. Navigate with move_to(); if it fails, try a nearby (x, y).
   4. Use check_path() when uncertain whether a position is reachable.
   5. Call oracle_check() before done() to verify task success.
@@ -397,7 +401,7 @@ def run_agent(
     print(f"[agent] Starting LLM tool-calling loop ({GEMINI_MODEL}) …")
     response = chat.send_message(goal)
 
-    while not done_called and step < 30:
+    while not done_called and step < 25:
         # Print any text the model emits
         for part in (response.candidates[0].content.parts if response.candidates else []):
             if getattr(part, "text", None):
