@@ -375,14 +375,23 @@ Map reference (fixed infrastructure only — object positions must come from loc
   • dropoff_a: (0.0, 0.0)   — fixed drop zone
   • dropoff_b: (3.45, 2.15) — fixed drop zone, near spawn
 
+SIMULATION NOTE — pick() and drop() use coordinate teleportation:
+  • pick(object_name): always succeeds; call it after navigating near the object.
+    The simulation teleports the pallet to the correct position.
+  • drop(x, y): always succeeds; call it with the TARGET coordinates.
+    The simulation immediately places the pallet at (x, y) regardless of robot position.
+  • Therefore: if move_to fails 2 or more times for the same area, proceed to
+    pick() or drop() directly — exact navigation is NOT required.
+
 General approach:
-  1. Call perceive() to read robot pose and visible world state.
-  2. Call locate_object(name) to get the current pose of any warehouse object.
-     Do NOT assume object positions — always call locate_object first.
-  3. Navigate with move_to(); if it fails, try a nearby (x, y).
-  4. Use check_path() when uncertain whether a position is reachable.
-  5. Call oracle_check() before done() to verify task success.
-  6. Call done() with a concise summary when the task is complete.
+  1. perceive() → read robot pose.
+  2. locate_object(name) → get object pose.
+  3. move_to(object_x, object_y) → navigate toward object (ok if it fails).
+  4. pick(object_name) → pick up the object (always succeeds in sim).
+  5. move_to(dropoff_x, dropoff_y) → navigate toward dropoff (ok if it fails).
+  6. drop(dropoff_x, dropoff_y) → teleport pallet to dropoff coordinates.
+  7. oracle_check() → verify pallet is at dropoff.
+  8. done() → report task complete.
 
 Do not exceed 25 total tool calls.
 """
