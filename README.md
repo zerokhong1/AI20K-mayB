@@ -43,23 +43,37 @@ One agent, two backends, same interface.
 
 ## Quick start
 
+### LLM provider
+
+| Provider | Env | Requires |
+|----------|-----|----------|
+| Gemini flash-lite (default) | `LLM_PROVIDER=gemini` | `GEMINI_API_KEY` |
+| Ollama local (no key) | `LLM_PROVIDER=ollama` | `ollama` running + `ollama pull qwen2.5:7b` |
+
+Full Ollama setup: [RUN_local_ollama.md](RUN_local_ollama.md)
+
 ### Flat2DBackend — no ROS, offline
 
 ```bash
 cd ~/AI20K
-pip install google-genai pytest
+pip install google-genai pytest   # Gemini path only; Ollama needs no extra pip
 
-# Run one task
-python3 -c "
+# Run one task — Gemini
+GEMINI_API_KEY=your-key python3 -c "
 from colcon_ws.src.warehouse_robot_agent.warehouse_robot_agent.flat2d_backend import Flat2DBackend
 from colcon_ws.src.warehouse_robot_agent.warehouse_robot_agent.llm_agent import run_agent
-backend = Flat2DBackend()
-metrics = run_agent(backend)
-print(metrics)
+print(run_agent(Flat2DBackend()))
 "
 
-# Parity check (both backends offline)
-python3 eval/parity_check.py --both-flat2d
+# Run one task — Ollama (no key)
+LLM_PROVIDER=ollama python3 -c "
+from colcon_ws.src.warehouse_robot_agent.warehouse_robot_agent.flat2d_backend import Flat2DBackend
+from colcon_ws.src.warehouse_robot_agent.warehouse_robot_agent.llm_agent import run_agent
+print(run_agent(Flat2DBackend()))
+"
+
+# Parity check (variance baseline, no ROS)
+LLM_PROVIDER=ollama python3 eval/parity_check.py --both-flat2d
 
 # Durability test (5 consecutive dry-runs)
 python3 eval/demo_durability.py --dry-run

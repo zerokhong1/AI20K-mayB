@@ -1,18 +1,29 @@
 #!/usr/bin/env python3
 """
-LLM agent — warehouse pick-and-deliver using WorldBackend + Gemini flash-lite.
+LLM agent — warehouse pick-and-deliver using WorldBackend.
 
-Usage (after sourcing the colcon workspace):
+Providers (set LLM_PROVIDER env var):
+  gemini  (default) — Gemini flash-lite via google-genai SDK.
+                      Requires GEMINI_API_KEY.
+                      Quota rule: use a key separate from the P0.1 official
+                      eval key; share only after Bảng A numbers are finalized.
+
+  ollama            — Local model via Ollama's OpenAI-compatible REST API.
+                      No API key required.  Requires ollama running locally.
+                      Set OLLAMA_MODEL (default: qwen2.5:7b).
+                      Set OLLAMA_BASE_URL if non-default (default: http://localhost:11434).
+
+Usage:
+  # Gemini (remote key)
   GEMINI_API_KEY=your-key python3 llm_agent.py
-  GEMINI_API_KEY=your-key ros2 run warehouse_robot_agent llm_agent
 
-Quota rule: use a GEMINI_API_KEY separate from the P0.1 official eval key.
-If sharing one key with the BTC P0.1 eval, only run this after Bảng A
-official numbers are finalized (avoid rate-limit interference).
+  # Local — no key
+  LLM_PROVIDER=ollama python3 llm_agent.py
+  LLM_PROVIDER=ollama WORLD_BACKEND=gazebo ros2 run warehouse_robot_agent llm_agent
 
 Backend: any WorldBackend (Flat2DBackend, GazeboBackend, mocks).
-Model:   gemini-2.0-flash-lite  (override with GEMINI_MODEL env var)
-SDK:     google-genai >= 2.0  (pip install google-genai)
+SDK:     google-genai >= 2.0  (pip install google-genai)  — Gemini only
+         requests (stdlib)                                 — Ollama only
 """
 
 import json
@@ -155,6 +166,117 @@ def _gemini_tools() -> "list[gtypes.Tool]":
     return [gtypes.Tool(function_declarations=decls)]
 
 
+# ──────────────────────── Ollama provider (OpenAI-compat) ────────────────── #
+# Uses requests (stdlib) against Ollama's /v1/chat/completions endpoint.
+# No extra pip install; qwen2.5:7b supports tool_call format via this endpoint.
+
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL    = os.environ.get("OLLAMA_MODEL",    "qwen2.5:7b")
+
+
+def _ollama_tools() -> list[dict]:
+    """Convert TOOLS (JSON Schema) → OpenAI function-calling format for Ollama."""
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name":        t["name"],
+                "description": t["description"],
+                "parameters":  t["input_schema"],
+            },
+        }
+        for t in TOOLS
+    ]
+
+
+def _run_agent_ollama(
+    backend,
+    goal_text: str,
+    system_prompt: str,
+    temperature: float,
+) -> dict:
+    """Run one task via Ollama's OpenAI-compatible tool-calling endpoint."""
+    import requests  # always available, no pip install needed
+
+    tools    = _ollama_tools()
+    url      = f"{OLLAMA_BASE_URL}/v1/chat/completions"
+    messages: list[dict] = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user",   "content": goal_text},
+    ]
+
+    done_called = False
+    step        = 0
+    trace: list[dict] = []
+
+    print(f"[agent] Starting Ollama tool-calling loop ({OLLAMA_MODEL}) …")
+
+    while not done_called and step < 30:
+        resp = requests.post(
+            url,
+            json={
+                "model":       OLLAMA_MODEL,
+                "messages":    messages,
+                "tools":       tools,
+                "temperature": temperature,
+                "stream":      False,
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        data   = resp.json()
+        choice = data["choices"][0]
+        msg    = choice["message"]
+        reason = choice.get("finish_reason", "")
+
+        if msg.get("content"):
+            print(f"[agent] Assistant: {msg['content']}")
+
+        tool_calls = msg.get("tool_calls") or []
+        if not tool_calls:
+            print(f"[agent] No tool calls — finish_reason={reason}")
+            break
+
+        print(f"\n[agent] ─── Ollama turn ({len(tool_calls)} tool call(s)) ───")
+
+        # Append assistant message (carries tool_calls) before tool results
+        messages.append(msg)
+
+        for tc in tool_calls:
+            step += 1
+            name = tc["function"]["name"]
+            try:
+                inp = json.loads(tc["function"]["arguments"])
+            except Exception:
+                inp = {}
+
+            print(f"[agent] [{step:02d}] → {name}({json.dumps(inp, ensure_ascii=False)})")
+            result_str = dispatch(backend, name, inp)
+            print(f"[agent]       ← {result_str[:300]}")
+
+            try:
+                output = json.loads(result_str)
+            except Exception:
+                output = result_str
+
+            trace.append({"step": step, "tool": name, "input": inp, "output": output})
+
+            if name == "done":
+                done_called = True
+
+            messages.append({
+                "role":         "tool",
+                "tool_call_id": tc.get("id", f"call_{step}"),
+                "content":      result_str,
+            })
+
+    print("\n[agent] ══════════════════════════════")
+    print(f"[agent] Task loop finished. steps={step} done={done_called}")
+    print(f"[agent] Status: {'DONE ✓' if done_called else 'loop ended without done() call'}")
+
+    return {"steps": step, "done_called": done_called, "trace": trace}
+
+
 # ─────────────────────────── tool dispatcher ──────────────────────────────── #
 
 def dispatch(backend, name: str, inp: dict) -> str:
@@ -232,7 +354,19 @@ def run_agent(
     Accepts any WorldBackend (GazeboBackend, Flat2DBackend, mocks).
     Returns {"steps": int, "done_called": bool, "trace": list[dict]}.
     Each trace entry: {"step": int, "tool": str, "input": dict, "output": any}.
+
+    Provider is selected by LLM_PROVIDER env var (default: "gemini").
+      gemini — Gemini flash-lite via google-genai SDK; requires GEMINI_API_KEY
+      ollama — local Ollama via /v1/chat/completions; requires ollama running
     """
+    provider      = os.environ.get("LLM_PROVIDER", "gemini").lower()
+    goal          = goal_text    or INITIAL_USER_MSG
+    prompt        = system_prompt or SYSTEM_PROMPT
+
+    if provider == "ollama":
+        return _run_agent_ollama(backend, goal, prompt, temperature)
+
+    # ── Gemini path ───────────────────────────────────────────────────────── #
     if not _GEMINI_OK:
         raise ImportError("google-genai not installed: pip install google-genai")
 
@@ -241,27 +375,27 @@ def run_agent(
         raise RuntimeError(
             "GEMINI_API_KEY not set.\n"
             "  export GEMINI_API_KEY=your-key\n"
-            "Use a key SEPARATE from the P0.1 official eval key."
+            "Use a key SEPARATE from the P0.1 official eval key.\n"
+            "Or: LLM_PROVIDER=ollama for local no-key run."
         )
 
     client = genai.Client(api_key=api_key)
 
     config = gtypes.GenerateContentConfig(
-        system_instruction=(system_prompt or SYSTEM_PROMPT),
+        system_instruction=prompt,
         tools=_gemini_tools(),
         automatic_function_calling=gtypes.AutomaticFunctionCallingConfig(disable=True),
         temperature=temperature,   # 0.0 = deterministic; parity runs use T=0
     )
 
     chat = client.chats.create(model=GEMINI_MODEL, config=config)
-    user_msg = goal_text or INITIAL_USER_MSG
 
     done_called = False
     step = 0
     trace: list[dict] = []
 
     print(f"[agent] Starting LLM tool-calling loop ({GEMINI_MODEL}) …")
-    response = chat.send_message(user_msg)
+    response = chat.send_message(goal)
 
     while not done_called and step < 30:
         # Print any text the model emits
