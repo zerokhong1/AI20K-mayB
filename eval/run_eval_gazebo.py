@@ -49,7 +49,9 @@ REPORT_OUT  = RESULTS_DIR / "report_v2.md"
 PALLET_SPAWN_X = -0.28
 PALLET_SPAWN_Y = -9.48
 PALLET_MODEL   = "aws_robomaker_warehouse_PalletJackB_01_001"
+ROBOT_MODEL    = "warehouse_forklift"
 DROPOFF_A      = (0.0, 0.0)
+NAV_TOL_M      = 2.0   # robot must be within this distance of dropoff_a to count nav as succeeded
 
 # Human-readable labels for locate_object source strings
 _SOURCE_LABELS = {
@@ -112,8 +114,15 @@ def _gz_teleport_pallet() -> bool:
 
 
 def _oracle_grade(threshold_m: float = 1.5) -> dict:
-    """Query Gazebo ground-truth pose and return grading dict."""
+    """Query Gazebo ground-truth pose and return grading dict.
+
+    Pallet dist is NOT independent (drop() teleports pallet to dest → oracle reads it back).
+    Robot dist IS independent (drop() does not move the robot).
+    nav_success = robot within NAV_TOL_M of dropoff_a after task completion.
+    """
     pallet_gt = _gz_model_pose(PALLET_MODEL)
+    robot_gt  = _gz_model_pose(ROBOT_MODEL)
+
     dist = None
     success = False
     if pallet_gt is not None:
@@ -121,11 +130,24 @@ def _oracle_grade(threshold_m: float = 1.5) -> dict:
         dy = pallet_gt.y - DROPOFF_A[1]
         dist = math.sqrt(dx * dx + dy * dy)
         success = dist < threshold_m
+
+    robot_dist = None
+    nav_success = None
+    if robot_gt is not None:
+        rdx = robot_gt.x - DROPOFF_A[0]
+        rdy = robot_gt.y - DROPOFF_A[1]
+        robot_dist = math.sqrt(rdx * rdx + rdy * rdy)
+        nav_success = robot_dist < NAV_TOL_M
+
     return {
-        "pallet_gt":           str(pallet_gt) if pallet_gt else "gz_cli_unavailable",
-        "dist_to_dropoff_a_m": round(dist, 3) if dist is not None else None,
-        "success":             success,
-        "threshold_m":         threshold_m,
+        "pallet_gt":                 str(pallet_gt) if pallet_gt else "gz_cli_unavailable",
+        "dist_to_dropoff_a_m":       round(dist, 3) if dist is not None else None,
+        "success":                   success,
+        "threshold_m":               threshold_m,
+        "robot_gt_pose":             str(robot_gt) if robot_gt else "gz_cli_unavailable",
+        "robot_dist_to_dropoff_a_m": round(robot_dist, 2) if robot_dist is not None else None,
+        "nav_success":               nav_success,
+        "nav_tol_m":                 NAV_TOL_M,
     }
 
 
@@ -210,7 +232,7 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
 ## Bảng C — Gazebo navigation showcase (teleport-assisted){note}
 
 > **Lưu ý: Bảng C là bonus showcase — không thuộc phạm vi đo chính Bảng A/B.**
-> Backend: `WORLD_BACKEND=gazebo` · Gazebo Harmonic · AWS small_warehouse
+> Backend: `WORLD_BACKEND=gazebo` · Gazebo Harmonic · AWS small_warehouse (gz_world=default)
 >
 > ⚠️ **pick/drop = coordinate teleport stub** (MoveIt chưa tích hợp, planned D10+).
 > ⚠️ **Oracle KHÔNG độc lập với agent**: `drop(x,y)` gọi `gz set_pose(pallet, x, y)`;
@@ -220,11 +242,12 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
 > và thực thi trong môi trường 3D thật. `locate_object source = GT registry` nghĩa là
 > agent dùng bảng toạ độ tĩnh, chưa dùng camera/ARMBench.
 >
-> n = {total} · Pass = {passes}/{total} (teleport-assisted, không phải manipulation thật)
+> n = {total} · Pass = {passes}/{total} (teleport-assisted)
+> Nav² = robot within {NAV_TOL_M}m of dropoff_a (independent — drop() không di chuyển robot)
 > Run: {run_ts}
 
-| Task ID | goal_text (tóm tắt) | Steps | Time (s) | Dist pallet→dropoff_a¹ | locate_object source |
-|---------|---------------------|-------|----------|------------------------|----------------------|
+| Task ID | goal_text (tóm tắt) | Steps | Time (s) | Nav² robot→dropoff_a | Dist pallet→dropoff_a¹ | locate_object source |
+|---------|---------------------|-------|----------|-----------------------|------------------------|----------------------|
 """
 
     rows_md = ""
@@ -232,11 +255,18 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
         short_goal = r["goal_text"][:55] + ("…" if len(r["goal_text"]) > 55 else "")
         dist = r["oracle"].get("dist_to_dropoff_a_m")
         dist_str = f"{dist:.3f}" if dist is not None else "—"
+        robot_dist = r["oracle"].get("robot_dist_to_dropoff_a_m")
+        nav_ok     = r["oracle"].get("nav_success")
+        if robot_dist is not None:
+            nav_str = f"{robot_dist:.2f}m {'✓' if nav_ok else '✗'}"
+        else:
+            nav_str = "—"
         loc_src  = _locate_sources_summary(r.get("locate_sources", []))
         rows_md += (
             f"| {r['id']} | {short_goal} "
             f"| {r['steps'] if r['steps'] is not None else '—'} "
             f"| {r['elapsed_s'] if r['elapsed_s'] is not None else '—'} "
+            f"| {nav_str} "
             f"| {dist_str} "
             f"| {loc_src} |\n"
         )
@@ -245,11 +275,13 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
 
 > ¹ Dist pallet→dropoff_a đo bằng `gz model -p` ngay sau `drop()` — **không phải** metric
 > độc lập; giá trị này luôn = 0 vì drop() teleport pallet tới đúng đích trước khi oracle đọc.
+> ² Robot→dropoff_a = `gz model -p warehouse_forklift` sau khi run_agent() trả về —
+> **độc lập thật**: drop() chỉ teleport pallet, không di chuyển robot. Nav✓ = robot < {nav_tol_m}m.
 >
 > **Audit trail**: `eval/results/traces/` chứa full tool-call sequences cho mỗi run.
 > Cột *locate_object source*: **GT registry** = dict toạ độ tĩnh `_WORLD_OBJECTS` (không sensor).
 > n nhỏ (= {total}) — chỉ đủ xác nhận interface end-to-end hoạt động.
-""".format(total=total)
+""".format(total=total, nav_tol_m=NAV_TOL_M)
 
     # ── Assemble the full file ──────────────────────────────────────────── #
     # Read existing content and strip any previous Bảng C section

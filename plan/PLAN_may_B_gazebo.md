@@ -62,7 +62,21 @@ Lịch sử lỗi: `start_demo.sh` cũ source sai workspace + launch world-only 
 Stack thật chạy bằng `warehouse_sim.launch.py` trong `~/colcon_ws` — ghi tay ở `pkill.md`.
 Suốt nhiều vòng review code "đọc thấy đúng" nhưng không có raw output — chính vì stack chưa bao giờ chạy từ repo.
 
-### Q6 — warehouse_nav phải vào repo trước khi nộp (P0 nộp)
+### Q6 — Nhãn "3/3" phải luôn kèm "(teleport-assisted)" (P0 integrity)
+
+Mọi chỗ số "3/3 PASS" xuất hiện (slide, README, báo cáo, commit message) **phải kèm ngay**
+`(teleport-assisted)`. Không được để số đứng một mình — nếu đuôi rụng → giám khảo thấy
+"3/3 PASS" không có ngữ cảnh = claim sai.
+
+Ví dụ đúng: `Bảng C: 3/3 (teleport-assisted)` hoặc `3/3 tasks passed (pick/drop = teleport stub)`.
+Ví dụ sai: `kết quả: 3/3 PASS`, `oracle PASS cả 3 task`.
+
+Lý do: oracle KHÔNG độc lập (dist=0 là tautology), robot KHÔNG di chuyển được (nav timeout,
+robot ở spawn 4.07m từ dropoff_a). "3/3" đo interface end-to-end, không đo manipulation hay nav.
+
+---
+
+### Q7 — warehouse_nav phải vào repo trước khi nộp (P0 nộp)
 
 **Trạng thái:** `~/colcon_ws/src/warehouse_nav` tồn tại trên đĩa máy B nhưng **chưa commit vào repo**.
 Clone sạch repo → `start_demo.sh` fail ngay preflight (`~/colcon_ws/install/setup.bash missing`).

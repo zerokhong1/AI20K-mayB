@@ -60,7 +60,7 @@ Cùng 1 goal: *"Retrieve pallet_jack → deliver to dropoff_a"*
 | 9 | `oracle_check` | ✓ | ✓ |
 | 10 | `done` | ✓ | ✓ |
 
-**Kết quả:** 10/10 bước khớp · oracle PASS cả 2 backend
+**Kết quả:** 10/10 bước khớp · interface end-to-end thông cả 2 backend (teleport-assisted; pick/drop = stub)
 
 *Trace đầy đủ: `eval/results/traces/`*
 
@@ -88,8 +88,8 @@ Cùng 1 goal: *"Retrieve pallet_jack → deliver to dropoff_a"*
 > Agent code: 0 dòng thay đổi."
 
 **"Trace Gazebo có thật không hay giả lập?"**
-> "Bảng C hiện là dry-run chờ stack Gazebo live.  
-> Trace Flat2D (trong repo mayB) là thật — 10 bước, oracle PASS, đo được trong `eval/results/`.  
+> "Bảng C chạy live (3/3 teleport-assisted, pick/drop=stub, nav timeout — xem report_v2.md).  
+> Trace Flat2D (trong repo mayB) là thật — 10 bước (teleport-assisted), đo được trong `eval/results/`.  
 > Bảng A/B official chạy ở repo BTC (LangGraph + Gemini flash-lite) — tách biệt."
 
 **"Agent ở đây là model gì?"**
