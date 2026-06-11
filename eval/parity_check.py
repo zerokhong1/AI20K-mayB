@@ -218,6 +218,20 @@ def write_parity_report(run_id: str, goal_text: str, cmp: dict,
         table_rows += f"| {row} | {t2} | {tgz} | {mark} |\n"
         row += 1
 
+    sim_pct = cmp['seq_sim_pct']
+    PARITY_THRESHOLD = 80.0
+    if sim_pct >= PARITY_THRESHOLD:
+        threshold_verdict = (
+            f"**{sim_pct}% ≥ {PARITY_THRESHOLD}% threshold** — agent dùng cùng chiến lược "
+            f"bất kể backend. Lệch nhau là retry backend-specific (Nav2 reject, partial move)."
+        )
+    else:
+        threshold_verdict = (
+            f"**{sim_pct}% < {PARITY_THRESHOLD}% threshold** — chưa đạt parity. "
+            f"Gazebo thêm extra `move_to` retries (Nav2 reject goal do odom sai) "
+            f"không có trong flat2d. Parity chưa được chứng minh."
+        )
+
     report = f"""\
 # Parity Check — 1 agent, 2 backends
 
@@ -232,7 +246,7 @@ def write_parity_report(run_id: str, goal_text: str, cmp: dict,
 | Flat2D steps | {cmp['len_2d']} |
 | {run2_label} steps | {cmp['len_gz']} |
 | LCS length | {cmp['lcs_length']} |
-| Sequence similarity | **{cmp['seq_sim_pct']}%** |
+| Sequence similarity | **{sim_pct}%** |
 | Flat2D done() called | {cmp['success_2d']} |
 | {run2_label} done() called | {cmp['success_gz']} |
 
@@ -254,10 +268,8 @@ def write_parity_report(run_id: str, goal_text: str, cmp: dict,
 - Flat2D trace: `{path_2d.name}`
 - {run2_label.capitalize()} trace: `{path_gz.name}`
 
-> **Interpretation:** Sequence similarity ≥ 80% indicates the agent uses the same
-> reasoning strategy regardless of backend. Differences arise from backend-specific
-> retries (Nav2 timeouts, partial moves) not from agent logic changes.
-> Both trace files are stored in `eval/results/traces/` for audit.
+> **Interpretation:** {threshold_verdict}
+> Threshold = {PARITY_THRESHOLD}%. Both trace files in `eval/results/traces/` for audit.
 """
     out.write_text(report)
     print(f"[parity] Report saved → {out}")

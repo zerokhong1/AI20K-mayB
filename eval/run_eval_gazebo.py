@@ -207,16 +207,24 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
     note   = " *(dry-run — not executed)*" if dry_run else ""
 
     bang_c_header = f"""\
-## Bảng C — Gazebo bonus showcase (sim→real){note}
+## Bảng C — Gazebo navigation showcase (teleport-assisted){note}
 
 > **Lưu ý: Bảng C là bonus showcase — không thuộc phạm vi đo chính Bảng A/B.**
 > Backend: `WORLD_BACKEND=gazebo` · Gazebo Harmonic · AWS small_warehouse
-> Oracle: ground-truth `gz model -p` — **độc lập với agent**
-> n = {total} (nhỏ, mục đích showcase) · Pass = {passes}/{total}
+>
+> ⚠️ **pick/drop = coordinate teleport stub** (MoveIt chưa tích hợp, planned D10+).
+> ⚠️ **Oracle KHÔNG độc lập với agent**: `drop(x,y)` gọi `gz set_pose(pallet, x, y)`;
+>    oracle đọc lại đúng vị trí đó → dist=0.000 là tautology, không phải kết quả vật lý.
+>
+> **Năng lực thật được chứng minh**: LLM agent tự ra chuỗi tool calls; Nav2 nhận goal
+> và thực thi trong môi trường 3D thật. `locate_object source = GT registry` nghĩa là
+> agent dùng bảng toạ độ tĩnh, chưa dùng camera/ARMBench.
+>
+> n = {total} · Pass = {passes}/{total} (teleport-assisted, không phải manipulation thật)
 > Run: {run_ts}
 
-| Task ID | goal_text (tóm tắt) | Success | Steps | Time (s) | Dist→dropoff_a (m) | locate_object source |
-|---------|---------------------|---------|-------|----------|--------------------|----------------------|
+| Task ID | goal_text (tóm tắt) | Steps | Time (s) | Dist pallet→dropoff_a¹ | locate_object source |
+|---------|---------------------|-------|----------|------------------------|----------------------|
 """
 
     rows_md = ""
@@ -226,7 +234,7 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
         dist_str = f"{dist:.3f}" if dist is not None else "—"
         loc_src  = _locate_sources_summary(r.get("locate_sources", []))
         rows_md += (
-            f"| {r['id']} | {short_goal} | {_success_str(r['success'])} "
+            f"| {r['id']} | {short_goal} "
             f"| {r['steps'] if r['steps'] is not None else '—'} "
             f"| {r['elapsed_s'] if r['elapsed_s'] is not None else '—'} "
             f"| {dist_str} "
@@ -235,11 +243,12 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
 
     disclosure = """\
 
-> **Disclosure:** Gazebo là mô phỏng vật lý 3D; agent (LLM + vòng tool) là thật, đọc kết quả
-> thật từ ROS 2. Cột *locate_object source* ghi nguồn định vị thực tế dùng trong mỗi task:
-> **ARMBench** = PerceptionNode + detector; **GT registry** = bảng tọa độ tĩnh (fallback);
-> **gz CLI** = truy vấn trực tiếp Gazebo model pose.
-> n nhỏ (= {total}) — đủ để minh hoạ sim→real, không đủ để kết luận thống kê.
+> ¹ Dist pallet→dropoff_a đo bằng `gz model -p` ngay sau `drop()` — **không phải** metric
+> độc lập; giá trị này luôn = 0 vì drop() teleport pallet tới đúng đích trước khi oracle đọc.
+>
+> **Audit trail**: `eval/results/traces/` chứa full tool-call sequences cho mỗi run.
+> Cột *locate_object source*: **GT registry** = dict toạ độ tĩnh `_WORLD_OBJECTS` (không sensor).
+> n nhỏ (= {total}) — chỉ đủ xác nhận interface end-to-end hoạt động.
 """.format(total=total)
 
     # ── Assemble the full file ──────────────────────────────────────────── #
