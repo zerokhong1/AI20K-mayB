@@ -62,8 +62,8 @@ _tmux_window "sim" \
 _log "Waiting for /odom (forklift spawned + bridge ready) …"
 T0=$SECONDS
 until ros2 topic list 2>/dev/null | grep -q "^/odom$"; do
-    if (( SECONDS - T0 > 90 )); then
-        _err "Forklift /odom not seen in 90 s — check tmux window 'sim'"
+    if (( SECONDS - T0 > 150 )); then
+        _err "Forklift /odom not seen in 150 s — check tmux window 'sim'"
     fi
     sleep 2
 done
@@ -73,8 +73,8 @@ _ok "/odom present ($(( SECONDS - T0 )) s)"
 _log "Waiting for Nav2 navigate_to_pose …"
 T0=$SECONDS
 until ros2 action list 2>/dev/null | grep -q "navigate_to_pose"; do
-    if (( SECONDS - T0 > 90 )); then
-        _err "Nav2 navigate_to_pose not seen in 90 s — check tmux window 'sim'"
+    if (( SECONDS - T0 > 150 )); then
+        _err "Nav2 navigate_to_pose not seen in 150 s — check tmux window 'sim'"
     fi
     sleep 2
 done
