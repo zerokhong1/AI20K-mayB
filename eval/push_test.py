@@ -118,6 +118,10 @@ def main():
         dd = f"{d:.3f}" if d is not None else "n/a"
         print(f"| {name} | {bx} | {ax} | {dd} |")
 
+    # R2: unrounded deltas (full float precision, no rounding)
+    for name, before, after, d in rows:
+        print(f"[unrounded] {name}: before={before!r} after={after!r} delta={d!r}")
+
     node.destroy_node()
     rclpy.shutdown()
 

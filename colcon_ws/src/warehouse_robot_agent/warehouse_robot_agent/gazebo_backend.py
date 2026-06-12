@@ -214,7 +214,9 @@ class GazeboBackend(WorldBackend):
 
     def move_to(self, x: float, y: float, yaw: float = 0.0) -> bool:
         self._node.get_logger().info(f"[GazeboBackend] move_to ({x:.2f}, {y:.2f})")
-        success = self._node.navigate(x, y, yaw)
+        # 120 s: carry transit runs at vx_max 0.25 m/s (speed-limit Plan B);
+        # the old 30 s default expired mid-transit without cancelling the goal.
+        success = self._node.navigate(x, y, yaw, timeout=120.0)
         if not success:
             # Nav2 often reports FOLLOW_PATH_FAILED when the robot reaches close
             # but can't satisfy the exact goal tolerance due to costmap inflation.
@@ -234,6 +236,23 @@ class GazeboBackend(WorldBackend):
     _DOCK_DIST_MIN = 0.62      # m, robot-center → pallet-center docking band
     _DOCK_DIST_MAX = 0.72
     _DOCK_BEARING_TOL = 0.0873  # rad (5°)
+    _CARRY_VX_MAX = 0.25   # m/s during transit with pallet
+    _NORMAL_VX_MAX = 0.5   # matches nav2_params FollowPath.vx_max default
+
+    def _set_vx_max(self, vx: float):
+        """Plan B speed limit: ros2 param set /controller_server FollowPath.vx_max <vx>.
+        SpeedFilter absent from nav2_params — topic /speed_limit has no subscriber.
+        Deviation: uses ros2 param set instead of /speed_limit topic.
+        Records raw output to log.
+        """
+        result = subprocess.run(
+            ["ros2", "param", "set", "/controller_server",
+             "FollowPath.vx_max", str(vx)],
+            capture_output=True, text=True, timeout=5.0)
+        self._node.get_logger().info(
+            f"[GazeboBackend] _set_vx_max({vx}) → rc={result.returncode} "
+            f"stdout={result.stdout.strip()!r}")
+        return result.returncode == 0
 
     def pick(self, object_name: str) -> bool:
         """Physics pick: Nav2 approach → GT servo dock → fork lift → verify.
@@ -328,6 +347,7 @@ class GazeboBackend(WorldBackend):
         # m) verdict
         if lift_ok and carry_ok:
             self._carrying = object_name
+            self._set_vx_max(self._CARRY_VX_MAX)
             log.info(f"[GazeboBackend] pick SUCCESS — z_lifted={z_lifted:.3f} m, "
                      f"carry_err={carry_err:.3f} m, carrying {object_name}")
             return True
@@ -371,6 +391,7 @@ class GazeboBackend(WorldBackend):
         self._drive_timed(-0.08, 7.5)
 
         # f-g) verify pallet GT placement
+        self._set_vx_max(self._NORMAL_VX_MAX)
         self._carrying = None
         pallet = _gz_model_pose_with_z(gz_name)
         if pallet is None:
