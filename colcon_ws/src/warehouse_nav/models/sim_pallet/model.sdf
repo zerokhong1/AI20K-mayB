@@ -1,0 +1,112 @@
+<?xml version="1.0"?>
+<!--
+  sim_pallet — small dynamic pallet liftable by warehouse_forklift.
+
+  Geometry (model origin at ground, z=0 = leg bottoms):
+    deck:  0.40 x 0.40 x 0.04 box, center z=0.12 → deck bottom z=0.10
+           (fork plate top at fork_joint=0 is z=0.09 → 1 cm clearance)
+    legs:  4x 0.05 x 0.05 x 0.10 box at (±0.175, ±0.175), center z=0.05
+           → inner faces 0.30 m apart > fork plate width 0.25 m
+    mass 8 kg, mu 0.9 on deck and legs.
+-->
+<sdf version="1.8">
+  <model name="sim_pallet">
+    <static>false</static>
+    <link name="pallet_body">
+      <inertial>
+        <pose>0 0 0.10 0 0 0</pose>
+        <mass>8.0</mass>
+        <inertia>
+          <ixx>0.120</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.120</iyy><iyz>0</iyz>
+          <izz>0.213</izz>
+        </inertia>
+      </inertial>
+
+      <!-- deck -->
+      <collision name="deck_collision">
+        <pose>0 0 0.12 0 0 0</pose>
+        <geometry><box><size>0.40 0.40 0.04</size></box></geometry>
+        <surface>
+          <friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction>
+          <!-- soft contact: damp deck-on-fork-plate bounce so static
+               friction holds during carry (stiff default chatters) -->
+          <contact><ode><kp>100000</kp><kd>1000</kd></ode></contact>
+        </surface>
+      </collision>
+      <visual name="deck_visual">
+        <pose>0 0 0.12 0 0 0</pose>
+        <geometry><box><size>0.40 0.40 0.04</size></box></geometry>
+        <material>
+          <ambient>0.65 0.45 0.20 1</ambient>
+          <diffuse>0.65 0.45 0.20 1</diffuse>
+        </material>
+      </visual>
+
+      <!-- legs (±0.175, ±0.175), bottom flush with z=0 -->
+      <collision name="leg_pp_collision">
+        <pose>0.175 0.175 0.05 0 0 0</pose>
+        <geometry><box><size>0.05 0.05 0.10</size></box></geometry>
+        <surface>
+          <friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction>
+        </surface>
+      </collision>
+      <visual name="leg_pp_visual">
+        <pose>0.175 0.175 0.05 0 0 0</pose>
+        <geometry><box><size>0.05 0.05 0.10</size></box></geometry>
+        <material>
+          <ambient>0.55 0.35 0.15 1</ambient>
+          <diffuse>0.55 0.35 0.15 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="leg_pn_collision">
+        <pose>0.175 -0.175 0.05 0 0 0</pose>
+        <geometry><box><size>0.05 0.05 0.10</size></box></geometry>
+        <surface>
+          <friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction>
+        </surface>
+      </collision>
+      <visual name="leg_pn_visual">
+        <pose>0.175 -0.175 0.05 0 0 0</pose>
+        <geometry><box><size>0.05 0.05 0.10</size></box></geometry>
+        <material>
+          <ambient>0.55 0.35 0.15 1</ambient>
+          <diffuse>0.55 0.35 0.15 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="leg_np_collision">
+        <pose>-0.175 0.175 0.05 0 0 0</pose>
+        <geometry><box><size>0.05 0.05 0.10</size></box></geometry>
+        <surface>
+          <friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction>
+        </surface>
+      </collision>
+      <visual name="leg_np_visual">
+        <pose>-0.175 0.175 0.05 0 0 0</pose>
+        <geometry><box><size>0.05 0.05 0.10</size></box></geometry>
+        <material>
+          <ambient>0.55 0.35 0.15 1</ambient>
+          <diffuse>0.55 0.35 0.15 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="leg_nn_collision">
+        <pose>-0.175 -0.175 0.05 0 0 0</pose>
+        <geometry><box><size>0.05 0.05 0.10</size></box></geometry>
+        <surface>
+          <friction><ode><mu>0.9</mu><mu2>0.9</mu2></ode></friction>
+        </surface>
+      </collision>
+      <visual name="leg_nn_visual">
+        <pose>-0.175 -0.175 0.05 0 0 0</pose>
+        <geometry><box><size>0.05 0.05 0.10</size></box></geometry>
+        <material>
+          <ambient>0.55 0.35 0.15 1</ambient>
+          <diffuse>0.55 0.35 0.15 1</diffuse>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

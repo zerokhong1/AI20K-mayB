@@ -330,6 +330,12 @@
       <collision name="fork_collision">
         <pose>0.30 0 0.025 0 0 0</pose>
         <geometry><box><size>0.60 0.25 0.05</size></box></geometry>
+        <!-- P2: high friction + soft contact so the carried pallet does not
+             micro-slide on the plate during accel/decel -->
+        <surface>
+          <friction><ode><mu>1.2</mu><mu2>1.2</mu2></ode></friction>
+          <contact><ode><kp>100000</kp><kd>1000</kd></ode></contact>
+        </surface>
       </collision>
       <visual name="fork_visual">
         <pose>0.30 0 0.025 0 0 0</pose>
@@ -472,11 +478,15 @@
             name="gz::sim::systems::JointPositionController">
       <joint_name>fork_joint</joint_name>
       <topic>/fork_cmd</topic>
-      <p_gain>200</p_gain>
-      <i_gain>1.0</i_gain>
-      <d_gain>20.0</d_gain>
-      <i_max>200</i_max>
-      <i_min>-200</i_min>
+      <!-- P2 fix: p=200/i=1 could not overcome gravity (fork 2 kg = 19.6 N,
+           +8 kg pallet = 98 N; max p-term over band was 40 N → fork crawled at
+           ~0.5 mm/s on integral term alone). p=3000 gives ss-err 33 mm loaded /
+           7 mm unloaded; i=200 closes the rest with tau ≈ 15 s; d=300 damps. -->
+      <p_gain>3000</p_gain>
+      <i_gain>200.0</i_gain>
+      <d_gain>300.0</d_gain>
+      <i_max>300</i_max>
+      <i_min>-300</i_min>
       <cmd_max>500</cmd_max>
       <cmd_min>-500</cmd_min>
     </plugin>

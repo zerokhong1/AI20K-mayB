@@ -105,6 +105,7 @@ def generate_launch_description():
             os.path.join(tb3_sim_dir, 'models'),
             warehouse_dir,
             os.path.join(warehouse_dir, 'models'),
+            os.path.join(pkg_dir, 'models'),   # P2: sim_pallet + forklift models
         ]).lstrip(':'),
         'GZ_SIM_SERVER_CONFIG_PATH': os.path.join(pkg_dir, 'config', 'gz_server.config'),
     }
