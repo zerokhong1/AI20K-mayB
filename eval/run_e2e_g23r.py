@@ -11,15 +11,18 @@ from warehouse_robot_agent.gazebo_backend import GazeboBackendNode, GazeboBacken
 ATTEMPT = int(sys.argv[1]) if len(sys.argv) > 1 else 1
 PALLET_MODEL = os.environ.get("PALLET_MODEL", "pallet_1")
 PALLET_SPAWN = (3.45, -4.0, 0.01)   # teleport-SETUP (allowed, noted as setup)
+ROBOT_SPAWN  = (3.45, -2.5, 0.03)   # teleport-SETUP robot to approach point (1.5m from pallet)
 DROPOFF_A = (0.0, 0.0)
 
 def main():
     print(f"\n=== G2.3R ATTEMPT {ATTEMPT} ===")
     print(f"pallet={PALLET_MODEL}  spawn={PALLET_SPAWN[:2]}  dropoff={DROPOFF_A}")
 
-    # SETUP: teleport pallet to spawn position (allowed for test reset)
+    # SETUP: teleport pallet + robot to known start poses (allowed for test reset)
     ok = _gz_set_pose(PALLET_MODEL, *PALLET_SPAWN)
     print(f"[SETUP] teleport pallet_1 → {PALLET_SPAWN}: {'ok' if ok else 'FAILED'}")
+    ok2 = _gz_set_pose("warehouse_forklift", *ROBOT_SPAWN)
+    print(f"[SETUP] teleport robot → {ROBOT_SPAWN}: {'ok' if ok2 else 'FAILED'}")
     time.sleep(2.0)
 
     rclpy.init()
@@ -28,6 +31,10 @@ def main():
     if not backend._node.spin_until_pose(timeout=20.0):
         print("FAIL: no robot pose in 20 s")
         rclpy.shutdown(); return
+
+    # SETUP: reinit AMCL from GT after robot teleport to spawn
+    print("[SETUP] AMCL reinit from GT at spawn ...")
+    backend._reinit_amcl_from_gt()
 
     # --- Milestone 0: before pick ---
     t0_pallet = _gz_model_pose_with_z(PALLET_MODEL)

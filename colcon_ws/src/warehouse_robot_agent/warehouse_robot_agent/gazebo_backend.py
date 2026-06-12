@@ -459,9 +459,10 @@ class GazeboBackend(WorldBackend):
         ay = y - 1.0 * math.sin(toward)
         yaw_to_goal = math.atan2(y - ay, x - ax)
 
-        # b) Nav2 to approach point
+        # b) Nav2 to approach point; GT-drive fallback when AMCL/Nav2 fails
         if not self.move_to(ax, ay, yaw_to_goal):
-            log.warn("drop: approach move_to failed — attempting placement anyway")
+            log.warn("drop: AMCL Nav2 failed — GT direct drive to approach point")
+            self._gt_drive_to_pose(ax, ay, tolerance=0.4)
 
         # c) advance ~0.4 m to put the pallet over the goal
         self._drive_timed(0.08, 5.0)
@@ -530,7 +531,7 @@ class GazeboBackend(WorldBackend):
         msg.pose.covariance[35] = 0.01
         self._spin_seconds(0.5)
         pub.publish(msg)
-        self._spin_seconds(2.0)
+        self._spin_seconds(5.0)   # let AMCL converge before Nav2 uses pose
         self._node.get_logger().warn(
             f"[F4] AMCL GT-reinit at ({gt[0]:.3f},{gt[1]:.3f},yaw={gt[3]:.3f}) — "
             "label all subsequent numbers (AMCL GT-reinit)")
@@ -599,6 +600,36 @@ class GazeboBackend(WorldBackend):
                 self._spin_seconds(0.2 - elapsed)
         self._stop_robot()
         log.error("servo_dock: timeout")
+        return False
+
+    def _gt_drive_to_pose(self, x: float, y: float,
+                          tolerance: float = 0.6, timeout: float = 120.0) -> bool:
+        """GT-based closed-loop drive toward (x, y). Used as Nav2 fallback in
+        drop() when AMCL/Nav2 fails in feature-poor pallet aisle (P2.6)."""
+        log = self._node.get_logger()
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            gt = _gz_dynamic_poses().get("warehouse_forklift")
+            if gt is None:
+                self._spin_seconds(0.2)
+                continue
+            dx, dy = x - gt[0], y - gt[1]
+            dist = math.sqrt(dx * dx + dy * dy)
+            if dist < tolerance:
+                self._stop_robot()
+                log.info(f"_gt_drive_to_pose ({x:.2f},{y:.2f}): reached dist={dist:.3f}")
+                return True
+            bearing = _norm_angle(math.atan2(dy, dx) - gt[3])
+            twist = Twist()
+            if abs(bearing) > 0.20:
+                twist.angular.z = 0.4 * (1.0 if bearing > 0 else -1.0)
+            else:
+                twist.linear.x = min(self._CARRY_VX_MAX, dist * 0.4)
+                twist.angular.z = 0.5 * bearing
+            self._node._cmd_vel_pub.publish(twist)
+            self._spin_seconds(0.1)
+        self._stop_robot()
+        log.error(f"_gt_drive_to_pose ({x:.2f},{y:.2f}): timeout")
         return False
 
     def _drive_timed(self, vx: float, seconds: float):
