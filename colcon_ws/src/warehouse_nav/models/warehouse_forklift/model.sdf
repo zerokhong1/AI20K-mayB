@@ -4,6 +4,11 @@
   Body: 0.65 × 0.45 × 0.24 m  |  Drive wheels: R=0.10 m
   Prismatic fork: 0–0.30 m stroke, controlled via /fork_cmd (gz.msgs.Double)
   Nav2-compatible: publishes /odom, /tf, /scan, /joint_states, /cmd_vel
+
+  P1 fix: all <link><pose> now explicit in model frame (SDF semantics ≠ URDF).
+  <joint><pose> reset to 0 0 0 0 0 0 (joint frame = child link origin).
+  base_link z raised 0.12→0.13 for 1 cm ground clearance (H2).
+  Note: URDF still has base z=0.12; 1 cm delta is acceptable, not fixed this phase.
 -->
 <sdf version="1.9">
   <model name="warehouse_forklift">
@@ -13,6 +18,7 @@
 
     <!-- Virtual ground frame -->
     <link name="base_footprint">
+      <pose>0 0 0 0 0 0</pose>
       <inertial>
         <mass>1e-9</mass>
         <inertia><ixx>1e-9</ixx><ixy>0</ixy><ixz>0</ixz>
@@ -22,6 +28,7 @@
 
     <!-- Main body — 0.65 × 0.45 × 0.24 m, green -->
     <link name="base_link">
+      <pose>0 0 0.13 0 0 0</pose>
       <inertial>
         <mass>25.0</mass>
         <inertia>
@@ -53,6 +60,7 @@
 
     <!-- Left drive wheel — cylinder R=0.10, L=0.04 -->
     <link name="wheel_left_link">
+      <pose>0 0.265 0.10 -1.5708 0 0</pose>
       <inertial>
         <mass>1.5</mass>
         <inertia>
@@ -74,6 +82,7 @@
 
     <!-- Right drive wheel -->
     <link name="wheel_right_link">
+      <pose>0 -0.265 0.10 -1.5708 0 0</pose>
       <inertial>
         <mass>1.5</mass>
         <inertia>
@@ -95,6 +104,7 @@
 
     <!-- Rear-left caster — sphere R=0.05 -->
     <link name="caster_back_left_link">
+      <pose>-0.25 0.15 0.05 0 0 0</pose>
       <inertial>
         <mass>0.3</mass>
         <inertia>
@@ -114,6 +124,7 @@
 
     <!-- Rear-right caster -->
     <link name="caster_back_right_link">
+      <pose>-0.25 -0.15 0.05 0 0 0</pose>
       <inertial>
         <mass>0.3</mass>
         <inertia>
@@ -131,8 +142,9 @@
       </visual>
     </link>
 
-    <!-- LiDAR link -->
+    <!-- LiDAR link — raised to z=0.625 to clear fork_mast top (z≈0.560) -->
     <link name="base_scan">
+      <pose>0 0 0.625 0 0 0</pose>
       <inertial>
         <mass>0.1</mass>
         <inertia>
@@ -182,6 +194,7 @@
 
     <!-- Fork mast — 0.08 × 0.30 × 0.55 m, yellow -->
     <link name="fork_mast_link">
+      <pose>0.325 0 0.285 0 0 0</pose>
       <inertial>
         <mass>3.0</mass>
         <inertia>
@@ -203,6 +216,7 @@
 
     <!-- S3 RGB camera + S4 Depth camera — front of body, looking forward -->
     <link name="camera_link">
+      <pose>0.30 0 0.35 0 0 0</pose>
       <inertial>
         <mass>0.03</mass>
         <inertia>
@@ -262,6 +276,7 @@
 
     <!-- S5 IMU (NÊN CÓ) — fuse with odom for stable localisation -->
     <link name="imu_link">
+      <pose>0 0 0.13 0 0 0</pose>
       <inertial>
         <mass>0.001</mass>
         <inertia>
@@ -291,6 +306,7 @@
 
     <!-- Optical frame: z-forward / y-down (ROS camera convention for 2D→3D projection) -->
     <link name="camera_optical_link">
+      <pose>0.30 0 0.35 -1.5708 0 -1.5708</pose>
       <inertial>
         <mass>1e-9</mass>
         <inertia>
@@ -302,6 +318,7 @@
 
     <!-- Fork carrier — box 0.60 × 0.25 × 0.05 m, yellow -->
     <link name="fork_link">
+      <pose>0.365 0 0.04 0 0 0</pose>
       <inertial>
         <mass>2.0</mass>
         <inertia>
@@ -326,18 +343,18 @@
 
     <!-- ══════════════════ JOINTS ══════════════════ -->
 
-    <!-- base_footprint → base_link: lift body to wheel-radius height -->
+    <!-- base_footprint → base_link -->
     <joint name="base_joint" type="fixed">
       <parent>base_footprint</parent>
       <child>base_link</child>
-      <pose>0 0 0.12 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
     </joint>
 
-    <!-- Drive wheels: z-offset puts wheel center at z=0.10 = wheel_radius -->
+    <!-- Drive wheels -->
     <joint name="wheel_left_joint" type="revolute">
       <parent>base_link</parent>
       <child>wheel_left_link</child>
-      <pose>0 0.265 -0.02 -1.5708 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
       <axis>
         <xyz>0 0 1</xyz>
         <dynamics><damping>0.01</damping><friction>0.01</friction></dynamics>
@@ -347,48 +364,48 @@
     <joint name="wheel_right_joint" type="revolute">
       <parent>base_link</parent>
       <child>wheel_right_link</child>
-      <pose>0 -0.265 -0.02 -1.5708 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
       <axis>
         <xyz>0 0 1</xyz>
         <dynamics><damping>0.01</damping><friction>0.01</friction></dynamics>
       </axis>
     </joint>
 
-    <!-- Casters: z-offset puts sphere center at z=0.05 = sphere_radius -->
+    <!-- Casters -->
     <joint name="caster_back_left_joint" type="ball">
       <parent>base_link</parent>
       <child>caster_back_left_link</child>
-      <pose>-0.25 0.15 -0.07 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
     </joint>
 
     <joint name="caster_back_right_joint" type="ball">
       <parent>base_link</parent>
       <child>caster_back_right_link</child>
-      <pose>-0.25 -0.15 -0.07 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
     </joint>
 
-    <!-- LiDAR on top of body — 0.35 m from ground -->
+    <!-- LiDAR -->
     <joint name="lidar_joint" type="fixed">
       <parent>base_link</parent>
       <child>base_scan</child>
-      <pose>0 0 0.155 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
     </joint>
 
-    <!-- Fork mast: front of body, center at z=0.275 from ground -->
+    <!-- Fork mast -->
     <joint name="mast_joint" type="fixed">
       <parent>base_link</parent>
       <child>fork_mast_link</child>
-      <pose>0.325 0 0.155 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
     </joint>
 
-    <!-- Camera: above body, forward-facing (0.30 m fwd, 0.22 m above base_link centre) -->
+    <!-- Camera -->
     <joint name="camera_joint" type="fixed">
       <parent>base_link</parent>
       <child>camera_link</child>
-      <pose>0.30 0 0.22 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
     </joint>
 
-    <!-- IMU: at centre of robot body -->
+    <!-- IMU -->
     <joint name="imu_joint" type="fixed">
       <parent>base_link</parent>
       <child>imu_link</child>
@@ -399,14 +416,14 @@
     <joint name="camera_optical_joint" type="fixed">
       <parent>camera_link</parent>
       <child>camera_optical_link</child>
-      <pose>0 0 0 -1.5708 0 -1.5708</pose>
+      <pose>0 0 0 0 0 0</pose>
     </joint>
 
-    <!-- Fork: prismatic up/down on mast, start near ground (z≈0.03) -->
+    <!-- Fork: prismatic up/down on mast, start near ground (z≈0.04) -->
     <joint name="fork_joint" type="prismatic">
       <parent>fork_mast_link</parent>
       <child>fork_link</child>
-      <pose>0.04 0 -0.245 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
       <axis>
         <xyz>0 0 1</xyz>
         <limit>

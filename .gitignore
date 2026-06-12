@@ -2,6 +2,10 @@
 colcon_ws/build
 colcon_ws/install
 colcon_ws/log
+# Root-level colcon artifacts (if colcon run from repo root)
+/build/
+/install/
+/log/
 # aws-robomaker-small-warehouse-world vendored directly (has local modifications — not suitable as submodule)
 # Python
 **/__pycache__
