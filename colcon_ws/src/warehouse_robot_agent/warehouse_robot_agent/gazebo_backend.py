@@ -329,7 +329,8 @@ class GazeboBackend(WorldBackend):
                 if d_appr > 1.0:
                     log.warn(f"pick: GT {d_appr:.2f} m from approach point "
                              "after move_to — AMCL GT-reinit + one retry")
-                    self._reinit_amcl_from_gt()
+                    if os.environ.get("F4_REINIT", "1") != "0":
+                        self._reinit_amcl_from_gt()
                     if not self.move_to(ax, ay, yaw_to_pallet):
                         log.warn("pick: approach retry failed — "
                                  "attempting servo anyway")
@@ -443,7 +444,10 @@ class GazeboBackend(WorldBackend):
         # feature-poor pallet aisle even with the 14 m lidar — re-init from
         # GT once before the transit leg. All transit numbers are labeled
         # (AMCL GT-reinit).
-        self._reinit_amcl_from_gt()
+        # B2.6.3: disable with F4_REINIT=0 for first attempt (new map expected
+        # to hold AMCL lock without manual reinit).
+        if os.environ.get("F4_REINIT", "1") != "0":
+            self._reinit_amcl_from_gt()
 
         # a) approach point 1.0 m short of (x, y) along robot → goal line
         robot = _gz_model_pose_with_z("warehouse_forklift")

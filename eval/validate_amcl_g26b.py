@@ -135,13 +135,13 @@ class ValidatorNode(Node):
         err = None
         if gt:
             err = math.sqrt((amcl[0] - gt[0]) ** 2 + (amcl[1] - gt[1]) ** 2)
-        passed = (err is not None and err < 0.5 and cov < 0.5)
+        passed = bool(err is not None and err < 0.5 and cov < 0.5)
         return {
             "label": label,
-            "amcl_xy": (round(amcl[0], 4), round(amcl[1], 4)),
-            "gt_xy": gt,
-            "error_m": round(err, 4) if err is not None else None,
-            "cov_trace": round(cov, 4),
+            "amcl_xy": (round(float(amcl[0]), 4), round(float(amcl[1]), 4)),
+            "gt_xy": (round(float(gt[0]), 4), round(float(gt[1]), 4)) if gt else None,
+            "error_m": round(float(err), 4) if err is not None else None,
+            "cov_trace": round(float(cov), 4),
             "pass": passed,
         }
 
@@ -162,7 +162,7 @@ def main():
     # ── Set initial pose at spawn ─────────────────────────────────────── #
     print(f"\n[INIT] Publishing /initialpose at spawn {SPAWN}")
     node.publish_initial_pose(*SPAWN)
-    node.dwell(5.0)  # allow AMCL to settle
+    node.dwell(15.0)  # allow AMCL to settle (needs several scan cycles)
 
     # ── P1: spawn ─────────────────────────────────────────────────────── #
     print("\n[P1] Spawn (3.45, 2.15) — stand 10 s")
