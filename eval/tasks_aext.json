@@ -1,0 +1,86 @@
+[
+  {
+    "id": "a1",
+    "goal_text": "Lấy pallet_jack từ vị trí lưu trữ và giao đến khu vực thả hàng A (dropoff_a).",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "simple_vi"
+  },
+  {
+    "id": "a2",
+    "goal_text": "Di chuyển pallet jack đến tọa độ (0, 0) — đây là dropoff_a.",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "simple_coord"
+  },
+  {
+    "id": "a3",
+    "goal_text": "Pallet đang ở khu vực phía nam của kho (khoảng y = -9). Hãy tìm và giao nó về điểm nhận hàng chính.",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "indirect_ref"
+  },
+  {
+    "id": "a4",
+    "goal_text": "Xe nâng cần chở pallet_jack đến dropoff_a. Trước tiên dùng perceive để kiểm tra trạng thái robot và thế giới, sau đó thực hiện nhiệm vụ.",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "multi_step"
+  },
+  {
+    "id": "a5",
+    "goal_text": "Có pallet cần giao gấp. Xác định vị trí pallet bằng locate_object, đến đó, bốc hàng, mang về dropoff_a và xác nhận bằng oracle_check.",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "multi_step"
+  },
+  {
+    "id": "a6",
+    "goal_text": "Chuyển pallet từ (-0.28, -9.48) đến (0.0, 0.0).",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "simple_coord"
+  },
+  {
+    "id": "a7",
+    "goal_text": "Nhiệm vụ vận chuyển: robot phải lấy pallet_jack rồi đặt ở khu vực trung tâm kho. Dùng oracle_check để xác nhận hoàn thành.",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "simple_vi"
+  },
+  {
+    "id": "a8",
+    "goal_text": "Retrieve the pallet jack from storage (around -0.28, -9.48) and bring it to drop-off zone A.",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "simple_en"
+  },
+  {
+    "id": "a9",
+    "goal_text": "Có một kiện hàng ở đâu đó trong kho. Hãy tìm kiện hàng (pallet) và giao đến dropoff_a.",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "locate_first"
+  },
+  {
+    "id": "a10",
+    "goal_text": "Giao pallet_jack đến khu vực thả B (dropoff_b gần tọa độ 3.45, 2.15) — KHÔNG phải dropoff_a.",
+    "oracle_target": "dropoff_b",
+    "threshold_m": 1.5,
+    "category": "alt_target"
+  },
+  {
+    "id": "a11",
+    "goal_text": "Thực hiện quy trình: locate pallet_jack → di chuyển đến pallet → pick → di chuyển đến dropoff_a → drop → oracle_check.",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "explicit_plan"
+  },
+  {
+    "id": "a12",
+    "goal_text": "Lấy pallet ở kệ gần cửa phía đông rồi giao về khu vực A. Nếu không tìm thấy đối tượng qua tên đó, hãy thử locate_object('pallet_jack') để tìm đúng tên.",
+    "oracle_target": "dropoff_a",
+    "threshold_m": 1.5,
+    "category": "ambiguous"
+  }
+]
