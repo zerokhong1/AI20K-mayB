@@ -76,6 +76,13 @@ def generate_launch_description():
         default_value=os.path.join(pkg_dir, 'params', 'nav2_params.yaml'),
         description='Nav2 params file')
 
+    # B2.6: rebaked lidar-0.625 map (default); override with map 005 for comparison
+    declare_map = DeclareLaunchArgument(
+        'map',
+        default_value=os.path.join(pkg_dir, 'maps', 'warehouse_lidar0625.yaml'),
+        description='Map YAML for AMCL/Nav2. Override: '
+                    'map:=<path>/maps/005/map.yaml to use old map for comparison')
+
     # Robot spawn pose — in the main aisle of the warehouse
     x_pose = LaunchConfiguration('x_pose', default='3.45')
     y_pose = LaunchConfiguration('y_pose', default='2.15')
@@ -224,7 +231,7 @@ def generate_launch_description():
             os.path.join(nav2_bringup_dir, 'launch', 'bringup_launch.py')),
         launch_arguments={
             'slam': slam,
-            'map': os.path.join(warehouse_dir, 'maps', '005', 'map.yaml'),
+            'map': LaunchConfiguration('map'),
             'use_sim_time': use_sim_time,
             'params_file': params_file,
             'autostart': autostart,
@@ -297,6 +304,7 @@ def generate_launch_description():
         declare_slam,
         declare_autostart,
         declare_params_file,
+        declare_map,
         set_gz_resources,
         set_gz_resources_aws,
         set_gz_resources_aws_models,
