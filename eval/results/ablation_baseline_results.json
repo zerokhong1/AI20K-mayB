@@ -1,0 +1,150 @@
+{
+  "run_ts": "2026-06-12T20:28:21+00:00",
+  "arm": "B-scripted-naive",
+  "rows": [
+    {
+      "task_id": "a1",
+      "category": "simple_vi",
+      "goal_short": "Lấy pallet_jack từ vị trí lưu trữ và giao đến khu vực t…",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    },
+    {
+      "task_id": "a2",
+      "category": "simple_coord",
+      "goal_short": "Di chuyển pallet jack đến tọa độ (0, 0) — đây là dropof…",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    },
+    {
+      "task_id": "a3",
+      "category": "indirect_ref",
+      "goal_short": "Pallet đang ở khu vực phía nam của kho (khoảng y = -9).…",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    },
+    {
+      "task_id": "a4",
+      "category": "multi_step",
+      "goal_short": "Xe nâng cần chở pallet_jack đến dropoff_a. Trước tiên d…",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    },
+    {
+      "task_id": "a5",
+      "category": "multi_step",
+      "goal_short": "Có pallet cần giao gấp. Xác định vị trí pallet bằng loc…",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    },
+    {
+      "task_id": "a6",
+      "category": "simple_coord",
+      "goal_short": "Chuyển pallet từ (-0.28, -9.48) đến (0.0, 0.0).…",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    },
+    {
+      "task_id": "a7",
+      "category": "simple_vi",
+      "goal_short": "Nhiệm vụ vận chuyển: robot phải lấy pallet_jack rồi đặt…",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    },
+    {
+      "task_id": "a8",
+      "category": "simple_en",
+      "goal_short": "Retrieve the pallet jack from storage (around -0.28, -9…",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    },
+    {
+      "task_id": "a9",
+      "category": "locate_first",
+      "goal_short": "Có một kiện hàng ở đâu đó trong kho. Hãy tìm kiện hàng …",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    },
+    {
+      "task_id": "a10",
+      "category": "alt_target",
+      "goal_short": "Giao pallet_jack đến khu vực thả B (dropoff_b gần tọa đ…",
+      "success": false,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 4.065,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_b"
+    },
+    {
+      "task_id": "a11",
+      "category": "explicit_plan",
+      "goal_short": "Thực hiện quy trình: locate pallet_jack → di chuyển đến…",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    },
+    {
+      "task_id": "a12",
+      "category": "ambiguous",
+      "goal_short": "Lấy pallet ở kệ gần cửa phía đông rồi giao về khu vực A…",
+      "success": true,
+      "steps": 8,
+      "time_s": 0.0,
+      "dist_m": 0.0,
+      "wrong_object": 0,
+      "parsed_object": "pallet_jack",
+      "parsed_dropoff": "dropoff_a"
+    }
+  ]
+}

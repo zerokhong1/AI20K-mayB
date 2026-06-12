@@ -57,3 +57,28 @@
 > Cột *locate_object source*: **GT registry** = dict toạ độ tĩnh `_WORLD_OBJECTS` (không sensor).
 > n nhỏ (= 3) — chỉ đủ xác nhận interface end-to-end hoạt động.
 
+---
+
+## Bảng A-ext (repo Máy B) — LLM planning showcase
+
+> **KHÔNG phải Bảng A official.** Bảng A/B official = BTC repo (LangGraph + Gemini flash-lite, n=33, Máy A).
+> Bảng này kiểm chứng LLM agent (ollama qwen2.5:7b) trên tập task tiếng Việt đa dạng, Flat2DBackend.
+>
+> `(model: ollama qwen2.5:7b ≠ Gemini official · Flat2DBackend · T=0 · seed=20260613 · GT-registry locate · parity-check only)`
+>
+> n = 12 · Pass = 11/12 · Run: 2026-06-12T20:26:57+00:00
+
+| Task | Category | Goal (tóm tắt) | ✓/✗ | Steps | Time (s) | dist→dropoff_a (m) | locate src |
+|------|----------|----------------|-----|-------|----------|--------------------|------------|
+| a1 | simple_vi | Lấy pallet_jack từ vị trí lưu trữ và giao đến khu vực t… | ✓ | 8 | 12.4 | 0.000 | gt_registry |
+| a2 | simple_coord | Di chuyển pallet jack đến tọa độ (0, 0) — đây là dropof… | ✓ | 7 | 4.3 | 0.000 | — |
+| a3 | indirect_ref | Pallet đang ở khu vực phía nam của kho (khoảng y = -9).… | ✓ | 8 | 5.39 | 0.000 | gt_registry |
+| a4 | multi_step | Xe nâng cần chở pallet_jack đến dropoff_a. Trước tiên d… | ✓ | 7 | 8.22 | 0.000 | — |
+| a5 | multi_step | Có pallet cần giao gấp. Xác định vị trí pallet bằng loc… | ✓ | 7 | 4.4 | 0.000 | gt_registry |
+| a6 | simple_coord | Chuyển pallet từ (-0.28, -9.48) đến (0.0, 0.0).… | ✓ | 8 | 5.25 | 0.000 | gt_registry |
+| a7 | simple_vi | Nhiệm vụ vận chuyển: robot phải lấy pallet_jack rồi đặt… | ✓ | 8 | 5.01 | 0.000 | gt_registry |
+| a8 | simple_en | Retrieve the pallet jack from storage (around -0.28, -9… | ✓ | 8 | 5.05 | 0.000 | gt_registry |
+| a9 | locate_first | Có một kiện hàng ở đâu đó trong kho. Hãy tìm kiện hàng … | ✓ | 8 | 5.05 | 0.000 | gt_registry |
+| a10 | alt_target | Giao pallet_jack đến khu vực thả B (dropoff_b gần tọa đ… | ✗ | 7 | 8.19 | 4.065 | — |
+| a11 | explicit_plan | Thực hiện quy trình: locate pallet_jack → di chuyển đến… | ✓ | 7 | 4.39 | 0.000 | gt_registry |
+| a12 | ambiguous | Lấy pallet ở kệ gần cửa phía đông rồi giao về khu vực A… | ✓ | 11 | 9.11 | 0.000 | gt_registry |

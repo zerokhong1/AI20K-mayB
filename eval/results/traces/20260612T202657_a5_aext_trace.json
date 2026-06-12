@@ -1,0 +1,110 @@
+{
+  "run_id": "20260612T202657",
+  "task_id": "a5",
+  "backend": "flat2d",
+  "provider": "ollama",
+  "seed": 20260613,
+  "goal_text": "Có pallet cần giao gấp. Xác định vị trí pallet bằng locate_object, đến đó, bốc hàng, mang về dropoff_a và xác nhận bằng oracle_check.",
+  "run_ts": "2026-06-12T20:26:57+00:00",
+  "metrics": {
+    "task_id": "a5",
+    "category": "multi_step",
+    "goal_short": "Có pallet cần giao gấp. Xác định vị trí pallet bằng loc…",
+    "success": true,
+    "steps": 7,
+    "time_s": 4.4,
+    "dist_m": 0.0,
+    "locate_src": "gt_registry",
+    "oracle_target": "dropoff_a",
+    "error": null
+  },
+  "oracle": {
+    "backend": "flat2d",
+    "robot_pose": "(0.00, 0.00, yaw=0.00)",
+    "pallet_pos": "(0.00, 0.00)",
+    "pallet_to_dropoff_a_m": 0.0,
+    "carrying": null,
+    "task_complete": true
+  },
+  "trace": [
+    {
+      "step": 1,
+      "tool": "locate_object",
+      "input": {
+        "object_name": "pallet_jack"
+      },
+      "output": {
+        "x": -0.28,
+        "y": -9.48,
+        "yaw": 0.0
+      }
+    },
+    {
+      "step": 2,
+      "tool": "move_to",
+      "input": {
+        "y": -9.48,
+        "x": -0.28
+      },
+      "output": {
+        "success": true
+      }
+    },
+    {
+      "step": 3,
+      "tool": "pick",
+      "input": {
+        "object_name": "pallet_jack"
+      },
+      "output": {
+        "success": true
+      }
+    },
+    {
+      "step": 4,
+      "tool": "move_to",
+      "input": {
+        "x": 0,
+        "y": 0
+      },
+      "output": {
+        "success": true
+      }
+    },
+    {
+      "step": 5,
+      "tool": "drop",
+      "input": {
+        "x": 0,
+        "y": 0
+      },
+      "output": {
+        "success": true
+      }
+    },
+    {
+      "step": 6,
+      "tool": "oracle_check",
+      "input": {},
+      "output": {
+        "backend": "flat2d",
+        "robot_pose": "(0.00, 0.00, yaw=0.00)",
+        "pallet_pos": "(0.00, 0.00)",
+        "pallet_to_dropoff_a_m": 0.0,
+        "carrying": null,
+        "task_complete": true
+      }
+    },
+    {
+      "step": 7,
+      "tool": "done",
+      "input": {
+        "summary": "Pallet has been picked up and delivered to dropoff A."
+      },
+      "output": {
+        "acknowledged": true,
+        "summary": "Pallet has been picked up and delivered to dropoff A."
+      }
+    }
+  ]
+}
