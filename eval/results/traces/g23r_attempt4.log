@@ -1,0 +1,42 @@
+[INFO] [1781280162.734437112] [gazebo_backend]: [GazeboBackend] pick pallet_1 (physics)
+[INFO] [1781280162.973144452] [gazebo_backend]: pick: already 1.18 m from pallet (≤2.0) — skipping Nav2 approach, servo only
+[INFO] [1781280164.121965588] [gazebo_backend]: servo_dock[drive]: dist=1.176 m bearing=0.0° cmd=(0.12, 0.00)
+[INFO] [1781280166.283196078] [gazebo_backend]: servo_dock[drive]: dist=0.956 m bearing=0.0° cmd=(0.12, 0.00)
+[INFO] [1781280168.629002731] [gazebo_backend]: servo_dock: DOCKED dist=0.716 m bearing=0.0°
+[INFO] [1781280170.211636475] [gazebo_backend]: pick lift: pallet z 0.018→0.201 (+0.183) after 1.1 s
+[INFO] [1781280180.590490708] [gazebo_backend]: pick verify: d_pallet=(0.000,0.444) d_robot=(-0.000,0.444) delta_robot=0.444 pallet_z_rev=0.203 pallet_yaw -0.00→0.00
+[INFO] [1781280182.650546739] [gazebo_backend]: [GazeboBackend] _set_vx_max(0.25) → rc=0 stdout='Set parameter successful'
+[INFO] [1781280182.651105841] [gazebo_backend]: [GazeboBackend] pick SUCCESS — z_lifted=0.183 m, carry_err=0.000 m, delta_robot=0.444 m, carrying pallet_1
+[INFO] [1781280182.909719865] [gazebo_backend]: [GazeboBackend] drop at (0.00, 0.00) (physics)
+[INFO] [1781280183.020141570] [gazebo_backend]: [GazeboBackend] move_to (0.77, -0.64)
+[WARN] [1781280208.274047583] [gazebo_backend]: drop: approach move_to failed — attempting placement anyway
+[ERROR] [1781280213.711357268] [gazebo_backend]: drop: robot GT 5.701 m from goal (>1.5m) — not at goal, aborting drop
+[INFO] [1781280217.057589509] [gazebo_backend]: [GazeboBackend] _set_vx_max(0.5) → rc=0 stdout='Set parameter successful'
+
+=== G2.3R ATTEMPT 4 ===
+pallet=pallet_1  spawn=(3.45, -4.0)  dropoff=(0.0, 0.0)
+[SETUP] teleport pallet_1 → (3.45, -4.0, 0.01): ok
+
+[M0 before pick] pallet_GT=(3.449999999998189, -4.000000000246295, 0.012038937162221935, -1.9278768264038374e-18)  robot_GT=(3.449999375943665, -2.8243037117152467, 0.03426216419483984, -1.5707961382850424)
+
+--- calling backend.pick() ---
+pick() returned: True
+[M1 after pick ] pallet_GT=(3.450000079348498, -3.558665139181182, 0.20290880319027085, 2.948344352936283e-07)  robot_GT=(3.4499993250735255, -2.8441874521138777, 0.03426217502405402, -1.5707959553842041)
+[speed limit] FollowPath.vx_max set to 0.25 m/s inside pick()
+
+--- calling backend.drop(0,0) ---
+drop() returned: False
+[M2 after drop ] pallet_GT=(3.449990219776177, -5.2524671838038035, 0.2044287071013205, -0.0007738254603713501)  robot_GT=(3.450531633016212, -4.537952858874326, 0.034261956277221464, -1.5715466827195697)
+
+--- oracle_check() ---
+{
+  "backend": "gazebo_harmonic",
+  "amcl_pose": "(2.62, -3.79, yaw=-2.36)",
+  "robot_gt_pose": "(3.45, -4.54, yaw=-1.57)",
+  "pallet_gt_pose": "(3.45, -5.25, yaw=-0.00)",
+  "pallet_to_dropoff_a_m": 6.284,
+  "carrying": "pallet_1",
+  "task_complete": false
+}
+
+[RESULT] dist(pallet_final, dropoff_a) = 6.284 m  (threshold ≤ 0.5 m)  → FAIL

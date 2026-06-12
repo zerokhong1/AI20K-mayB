@@ -179,9 +179,13 @@
               <max_angle>0</max_angle>
             </vertical>
           </scan>
+          <!-- P2.5 F3: extend 6.0→14.0 m for AMCL feature density in pallet
+               aisle (at 6.0 m, 50% of beams hit max range there → AMCL
+               diverged 2.9–3.3 m). Watch-list: if aliasing through shelf
+               gaps appears, try 10.0 m. -->
           <range>
             <min>0.12</min>
-            <max>6.0</max>
+            <max>14.0</max>
           </range>
           <noise>
             <type>gaussian</type>

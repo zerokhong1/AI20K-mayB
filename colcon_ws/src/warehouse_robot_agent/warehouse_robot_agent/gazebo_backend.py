@@ -60,6 +60,8 @@ class GazeboBackendNode(Node):
         super().__init__("gazebo_backend")
         self._amcl_pose: Optional[Pose2D] = None
         self._odom_pose: Optional[Pose2D] = None
+        # P2.5 F5: cov_xx + cov_yy of the latest /amcl_pose; 999.0 = no msg yet
+        self._amcl_cov_trace: float = 999.0
 
         # Latest detections from PerceptionNode (or None if not running)
         self._detections: dict[str, dict] = {}
@@ -90,6 +92,9 @@ class GazeboBackendNode(Node):
         yaw = _quat_to_yaw(p.orientation.x, p.orientation.y,
                            p.orientation.z, p.orientation.w)
         self._amcl_pose = Pose2D(p.position.x, p.position.y, yaw)
+        # P2.5 F5: covariance[0]=xx, covariance[7]=yy
+        cov = msg.pose.covariance
+        self._amcl_cov_trace = cov[0] + cov[7]
 
     def _odom_cb(self, msg: Odometry):
         p = msg.pose.pose
@@ -225,9 +230,19 @@ class GazeboBackend(WorldBackend):
             if pose is not None:
                 dist = math.sqrt((pose.x - x) ** 2 + (pose.y - y) ** 2)
                 if dist < 1.5:
-                    self._node.get_logger().info(
-                        f"[GazeboBackend] nav failed but within {dist:.2f} m of goal — treating as success")
-                    return True
+                    # P2.5 F5: the ≤1.5 m fallback is only trustworthy when
+                    # AMCL is converged — with a diverged filter the "dist"
+                    # is fiction (attempt 3: AMCL 2.9 m off in pallet aisle).
+                    cov = self._node._amcl_cov_trace
+                    if cov < 0.5:
+                        self._node.get_logger().info(
+                            f"[GazeboBackend] nav failed but dist={dist:.2f} m, "
+                            f"AMCL cov_trace={cov:.4f} < 0.5 — relaxed success (≤1.5m fallback)")
+                        return True
+                    self._node.get_logger().warn(
+                        f"[GazeboBackend] nav failed: dist={dist:.2f} m, "
+                        f"AMCL cov_trace={cov:.4f} ≥ 0.5 — DIVERGED, return False")
+                    return False
         return success
 
     # ------------------------------------------------------------------ #
@@ -236,6 +251,10 @@ class GazeboBackend(WorldBackend):
     _DOCK_DIST_MIN = 0.62      # m, robot-center → pallet-center docking band
     _DOCK_DIST_MAX = 0.72
     _DOCK_BEARING_TOL = 0.0873  # rad (5°)
+    # P2.5: fork-contact zone — fork tip reaches the pallet edge inside this
+    # radius. Forward motion here while misaligned rams the fork into the
+    # pallet side and the robot climbs it (wheels lose ground → stall).
+    _FORK_ZONE = 1.35          # m
     _CARRY_VX_MAX = 0.25   # m/s during transit with pallet
     _NORMAL_VX_MAX = 0.5   # matches nav2_params FollowPath.vx_max default
 
@@ -288,16 +307,43 @@ class GazeboBackend(WorldBackend):
         ay = py + 1.2 * math.sin(away)
         yaw_to_pallet = math.atan2(py - ay, px - ax)
 
-        # c) Nav2 to approach point
-        if not self.move_to(ax, ay, yaw_to_pallet):
-            log.warn("pick: approach move_to failed — attempting servo anyway")
+        # c) Nav2 to approach point — ONLY if far from the pallet. The pallet
+        # (0.14 m tall) is below the lidar plane (z=0.625) → invisible to
+        # Nav2/costmap; with xy_goal_tolerance 0.8 MPPI repeatedly rammed the
+        # robot into the pallet when started nearby (P2.5 static verify:
+        # robot ended dist 0.296 wedged into the deck). Within 2.0 m the GT
+        # servo handles the whole approach.
+        dist_to_pallet = math.sqrt((robot[0] - px) ** 2 + (robot[1] - py) ** 2)
+        if dist_to_pallet > 2.0:
+            if not self.move_to(ax, ay, yaw_to_pallet):
+                log.warn("pick: approach move_to failed — attempting servo anyway")
+            # P2.5 F4 (pick leg): AMCL drifts in the feature-poor aisle —
+            # Nav2 can report SUCCESS ~2 m from the true approach point
+            # (attempt 5: GT (5.16,-3.56) vs approach (3.45,-2.80) → servo
+            # docked from the east into shelving; collision_monitor froze
+            # it). Verify arrival on GT; if > 1.0 m off, GT-reinit AMCL and
+            # retry the approach once. Numbers labeled (AMCL GT-reinit).
+            rnow = _gz_model_pose_with_z("warehouse_forklift")
+            if rnow is not None:
+                d_appr = math.sqrt((rnow[0] - ax) ** 2 + (rnow[1] - ay) ** 2)
+                if d_appr > 1.0:
+                    log.warn(f"pick: GT {d_appr:.2f} m from approach point "
+                             "after move_to — AMCL GT-reinit + one retry")
+                    self._reinit_amcl_from_gt()
+                    if not self.move_to(ax, ay, yaw_to_pallet):
+                        log.warn("pick: approach retry failed — "
+                                 "attempting servo anyway")
+        else:
+            log.info(f"pick: already {dist_to_pallet:.2f} m from pallet (≤2.0) — "
+                     f"skipping Nav2 approach, servo only")
 
         # d) fork to ground
         self._set_fork(0.0)
         self._spin_seconds(1.0)
 
         # e) servo dock on GT poses (5 Hz max, ≤ 0.12 m/s)
-        if not self._servo_dock(gz_name, timeout=30.0):
+        # timeout 30→45 s: back-out + re-align cycle needs ~10 s extra
+        if not self._servo_dock(gz_name, timeout=45.0):
             self._stop_robot()
             log.error("pick: docking failed — aborting")
             return False
@@ -309,9 +355,25 @@ class GazeboBackend(WorldBackend):
         before = _gz_model_pose_with_z(gz_name)
         pallet_z_before = before[2] if before else 0.0
 
-        # h) lift
+        # h) lift — active wait until the pallet actually clears the ground.
+        # Fork PID i-term closes the load ss-error with tau ≈ 15 s; the old
+        # fixed 3 s wait gave lift 0.104–0.161 m depending on luck. At lift
+        # 0.104 the pallet legs (0.10 m tall) keep only 4 mm clearance; the
+        # carried load tips the robot forward (drive axle x=0, casters rear,
+        # 8 kg at ~0.7 m ahead) and the legs re-ground → robot anchored,
+        # reverse moved 0.000 m (static verify 2026-06-12).
         self._set_fork(0.20)
-        self._spin_seconds(3.0)
+        lift_t0 = time.time()
+        z_now = pallet_z_before
+        while time.time() - lift_t0 < 20.0:
+            self._spin_seconds(1.0)
+            cur = _gz_model_pose_with_z(gz_name)
+            if cur is not None:
+                z_now = cur[2]
+                if z_now - pallet_z_before >= 0.15:
+                    break
+        log.info(f"pick lift: pallet z {pallet_z_before:.3f}→{z_now:.3f} "
+                 f"(+{z_now - pallet_z_before:.3f}) after {time.time()-lift_t0:.1f} s")
 
         # i) pallet z + robot pose after lift
         after = _gz_model_pose_with_z(gz_name)
@@ -331,6 +393,10 @@ class GazeboBackend(WorldBackend):
         # l) verify lift + carried-continuity
         z_lifted = pallet_z_after - pallet_z_before
         carry_err: Optional[float] = None
+        delta_robot = 0.0
+        if robot_after and robot_rev:
+            delta_robot = math.sqrt((robot_rev[0] - robot_after[0]) ** 2
+                                    + (robot_rev[1] - robot_after[1]) ** 2)
         if after and robot_after and pallet_rev and robot_rev:
             dpx = pallet_rev[0] - after[0]
             dpy = pallet_rev[1] - after[1]
@@ -339,21 +405,28 @@ class GazeboBackend(WorldBackend):
             carry_err = math.sqrt((dpx - drx) ** 2 + (dpy - dry) ** 2)
             log.info(f"pick verify: d_pallet=({dpx:.3f},{dpy:.3f}) "
                      f"d_robot=({drx:.3f},{dry:.3f}) "
+                     f"delta_robot={delta_robot:.3f} "
                      f"pallet_z_rev={pallet_rev[2]:.3f} "
                      f"pallet_yaw {after[3]:.2f}→{pallet_rev[3]:.2f}")
         lift_ok = z_lifted >= 0.10
-        carry_ok = carry_err is not None and carry_err <= 0.05
+        # P2.5 F2: anti-vacuous guard — carry continuity only counts if the
+        # robot actually reversed ≥ 0.30 m (carry_err=0 with d_robot=0 is
+        # meaningless: nothing moved, nothing was verified).
+        carry_ok = (carry_err is not None and carry_err <= 0.05
+                    and delta_robot >= 0.30)
 
         # m) verdict
         if lift_ok and carry_ok:
             self._carrying = object_name
             self._set_vx_max(self._CARRY_VX_MAX)
             log.info(f"[GazeboBackend] pick SUCCESS — z_lifted={z_lifted:.3f} m, "
-                     f"carry_err={carry_err:.3f} m, carrying {object_name}")
+                     f"carry_err={carry_err:.3f} m, delta_robot={delta_robot:.3f} m, "
+                     f"carrying {object_name}")
             return True
         log.error(f"[GazeboBackend] pick FAILED — z_lifted={z_lifted:.3f} m "
                   f"(need ≥0.10), carry_err="
-                  f"{'n/a' if carry_err is None else f'{carry_err:.3f}'} m (need ≤0.05)")
+                  f"{'n/a' if carry_err is None else f'{carry_err:.3f}'} m (need ≤0.05), "
+                  f"delta_robot={delta_robot:.3f} m (need ≥0.30)")
         return False
 
     def drop(self, x: float, y: float) -> bool:
@@ -365,6 +438,12 @@ class GazeboBackend(WorldBackend):
         log = self._node.get_logger()
         log.info(f"[GazeboBackend] drop at ({x:.2f}, {y:.2f}) (physics)")
         gz_name = _GZ_MODEL_NAMES.get(self._carrying or "", self._carrying or PALLET_MODEL)
+
+        # F4 (P2.5): AMCL cannot hold lock through the pick phase in the
+        # feature-poor pallet aisle even with the 14 m lidar — re-init from
+        # GT once before the transit leg. All transit numbers are labeled
+        # (AMCL GT-reinit).
+        self._reinit_amcl_from_gt()
 
         # a) approach point 1.0 m short of (x, y) along robot → goal line
         robot = _gz_model_pose_with_z("warehouse_forklift")
@@ -382,6 +461,19 @@ class GazeboBackend(WorldBackend):
 
         # c) advance ~0.4 m to put the pallet over the goal
         self._drive_timed(0.08, 5.0)
+
+        # c2) P2.5 F5: GT robot-to-goal check before lowering fork — never
+        # drop the pallet far from the goal because AMCL thought we arrived.
+        robot_now = _gz_model_pose_with_z("warehouse_forklift")
+        if robot_now is not None:
+            robot_to_goal = math.sqrt((robot_now[0] - x) ** 2 + (robot_now[1] - y) ** 2)
+            if robot_to_goal > 1.5:
+                log.error(
+                    f"drop: robot GT {robot_to_goal:.3f} m from goal (>1.5m) — "
+                    f"not at goal, aborting drop")
+                self._set_vx_max(self._NORMAL_VX_MAX)
+                return False
+            log.info(f"drop: robot_to_goal GT = {robot_to_goal:.3f} m ≤ 1.5 m ✓")
 
         # d) lower fork
         self._set_fork(0.0)
@@ -410,6 +502,36 @@ class GazeboBackend(WorldBackend):
         return False
 
     # ------------------------------------------------------------------ #
+    def _reinit_amcl_from_gt(self) -> bool:
+        """F4: one-shot AMCL re-init from GT pose. LABEL all numbers
+        (AMCL GT-reinit) if used. Authorized by P2.5 after F3 (lidar 14 m)
+        failed to hold AMCL lock through the pick phase in the pallet aisle
+        (attempt 4: AMCL 1.13 m / 0.79 rad off at transit start → Nav2 drove
+        opposite the dropoff)."""
+        gt = _gz_model_pose_with_z("warehouse_forklift")
+        if gt is None:
+            self._node.get_logger().warn("_reinit_amcl: no GT pose available")
+            return False
+        pub = self._node.create_publisher(
+            PoseWithCovarianceStamped, "/initialpose", 10)
+        msg = PoseWithCovarianceStamped()
+        msg.header.frame_id = "map"
+        msg.pose.pose.position.x = gt[0]
+        msg.pose.pose.position.y = gt[1]
+        half = gt[3] / 2.0
+        msg.pose.pose.orientation.z = math.sin(half)
+        msg.pose.pose.orientation.w = math.cos(half)
+        msg.pose.covariance[0] = 0.05
+        msg.pose.covariance[7] = 0.05
+        msg.pose.covariance[35] = 0.01
+        self._spin_seconds(0.5)
+        pub.publish(msg)
+        self._spin_seconds(2.0)
+        self._node.get_logger().warn(
+            f"[F4] AMCL GT-reinit at ({gt[0]:.3f},{gt[1]:.3f},yaw={gt[3]:.3f}) — "
+            "label all subsequent numbers (AMCL GT-reinit)")
+        return True
+
     def _servo_dock(self, gz_pallet_name: str, timeout: float = 30.0) -> bool:
         """Closed-loop dock on GT poses until robot-pallet distance is in the
         docking band with the pallet dead ahead. 5 Hz max (gz CLI ≈ 100 ms/read)."""
@@ -436,18 +558,34 @@ class GazeboBackend(WorldBackend):
                 self._stop_robot()
                 log.info(f"servo_dock: DOCKED dist={dist:.3f} m bearing={math.degrees(bearing):.1f}°")
                 return True
-            if dist < self._DOCK_DIST_MIN:
-                self._stop_robot()
-                log.error(f"servo_dock: overshoot dist={dist:.3f} m "
-                          f"bearing={math.degrees(bearing):.1f}° — abort")
-                return False
-
             twist = Twist()
-            twist.linear.x = 0.12 if abs(bearing) < 0.2 else 0.05
-            twist.angular.z = max(-1.0, min(1.0, 1.5 * bearing))
+            if dist < self._DOCK_DIST_MIN:
+                # P2.5: too close — Nav2 (xy_goal_tolerance 0.8) can stop us
+                # inside the docking band; back straight out instead of the
+                # old hard abort ("overshoot").
+                twist.linear.x = -0.08
+                twist.angular.z = 0.0
+                phase = "too-close-backout"
+            elif dist < self._FORK_ZONE and abs(bearing) > self._DOCK_BEARING_TOL:
+                # P2.5: misaligned inside the fork zone — back STRAIGHT out
+                # first (static verify 2026-06-12: creeping forward at
+                # bearing -11.6° rammed the pallet, robot climbed it and
+                # stalled at dist 0.985 m, pitch -0.047 rad).
+                twist.linear.x = -0.08
+                twist.angular.z = 0.0
+                phase = "backout"
+            elif abs(bearing) >= 0.2:
+                # rotate in place until roughly facing the pallet
+                twist.linear.x = 0.0
+                twist.angular.z = max(-1.0, min(1.0, 1.5 * bearing))
+                phase = "align"
+            else:
+                twist.linear.x = 0.12 if abs(bearing) < 0.1 else 0.05
+                twist.angular.z = max(-1.0, min(1.0, 1.5 * bearing))
+                phase = "drive"
             self._node._cmd_vel_pub.publish(twist)
             if tick % 10 == 1:
-                log.info(f"servo_dock: dist={dist:.3f} m "
+                log.info(f"servo_dock[{phase}]: dist={dist:.3f} m "
                          f"bearing={math.degrees(bearing):.1f}° "
                          f"cmd=({twist.linear.x:.2f}, {twist.angular.z:.2f})")
 
@@ -462,27 +600,54 @@ class GazeboBackend(WorldBackend):
     def _drive_timed(self, vx: float, seconds: float):
         """Drive at constant vx for `seconds` with heading hold, then stop.
 
+        P2.5 F2: publishes at 25 Hz to out-rate collision_monitor (which
+        publishes zero-Twists to /cmd_vel for stop_pub_timeout=2 s after Nav2
+        stops and on FootprintApproach hazards) — previous 5 Hz loop lost the
+        last-message race at the bridge → d_robot ≈ 0 (vacuous pick "pass").
+        Stall detection: if robot GT displacement < 0.05 m in the first 2 s,
+        abort + log (collision_monitor or obstacle blocking).
+
         Heading hold (P on Gazebo GT yaw, ref = yaw at start) is required:
         reversing a diff-drive with rear casters is directionally unstable —
         open-loop reverse veered ~0.8 rad over 0.5 m and span the carried
         pallet off the fork (carry_err 0.31 m, e2e attempt 3). Odom yaw can
         NOT be used as reference: the veer comes from lateral wheel slip,
         which wheel odometry does not see (attempt 4: odom-hold still veered
-        0.64 rad). GT read is ~0.1 s → 5 Hz control ticks.
+        0.64 rad). Deviation from P2.5 spec snippet: GT read (~0.12 s,
+        blocking) is throttled to every 0.25 s instead of every tick, so the
+        publish rate actually reaches ~25 Hz between reads.
         """
-        gt = _gz_dynamic_poses().get("warehouse_forklift")
-        ref_yaw = gt[3] if gt else None
+        gt_start = _gz_dynamic_poses().get("warehouse_forklift")
+        ref_yaw = gt_start[3] if gt_start else None
+        start_pos = (gt_start[0], gt_start[1]) if gt_start else None
         twist = Twist()
         twist.linear.x = float(vx)
         deadline = time.time() + seconds
+        stall_checked = False
+        stall_check_time = time.time() + 2.0
+        next_gt_read = 0.0
         while time.time() < deadline:
-            if ref_yaw is not None:
+            now = time.time()
+            if ref_yaw is not None and now >= next_gt_read:
+                next_gt_read = now + 0.25
                 cur = _gz_dynamic_poses().get("warehouse_forklift")
                 if cur is not None:
                     err = _norm_angle(ref_yaw - cur[3])
                     twist.angular.z = max(-0.3, min(0.3, 2.0 * err))
+                    # stall check after 2 s
+                    if not stall_checked and now >= stall_check_time:
+                        stall_checked = True
+                        if start_pos:
+                            moved = math.sqrt((cur[0] - start_pos[0]) ** 2
+                                              + (cur[1] - start_pos[1]) ** 2)
+                            if moved < 0.05:
+                                self._node.get_logger().error(
+                                    f"_drive_timed STALL: moved only {moved:.3f} m in 2s "
+                                    f"(vx={vx}) — collision_monitor blocking? aborting")
+                                self._stop_robot()
+                                return
             self._node._cmd_vel_pub.publish(twist)
-            self._spin_seconds(0.1)
+            self._spin_seconds(0.04)   # 25 Hz — beats collision_monitor stop pubs
         self._stop_robot()
 
     def _stop_robot(self):

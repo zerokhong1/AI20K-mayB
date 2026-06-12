@@ -165,6 +165,26 @@ def generate_launch_description():
         condition=LaunchConfigurationEquals('robot_type', 'forklift'),
     )
 
+    # ---------- P2.5 D5: spawn sim_pallet (pallet_1) on startup ----------
+    declare_spawn_pallet = DeclareLaunchArgument(
+        'spawn_pallet', default_value='true',
+        description='Spawn sim_pallet (pallet_1) at (3.45, -4.0) on startup')
+
+    pallet_sdf = os.path.join(pkg_dir, 'models', 'sim_pallet', 'model.sdf')
+
+    spawn_pallet_node = Node(
+        package='ros_gz_sim',
+        executable='create',
+        arguments=[
+            '-world', 'default',
+            '-file', pallet_sdf,
+            '-name', 'pallet_1',
+            '-x', '3.45', '-y', '-4.0', '-z', '0.013',
+        ],
+        output='screen',
+        condition=IfCondition(LaunchConfiguration('spawn_pallet')),
+    )
+
     # ---------- Robot state publisher (URDF varies by robot_type) ----------
     urdf_tb3 = os.path.join(tb3_sim_dir, 'urdf', 'turtlebot3_waffle.urdf')
     with open(urdf_tb3, 'r') as f:
@@ -286,6 +306,8 @@ def generate_launch_description():
         spawn_tb3,
         spawn_forklift,
         forklift_ros_gz_bridge,
+        declare_spawn_pallet,
+        spawn_pallet_node,
         # RSP — one per robot_type
         robot_state_publisher,
         robot_state_publisher_forklift,

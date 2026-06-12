@@ -1,0 +1,19 @@
+robot GT before: (3.450000000005899, -2.000000284375937, 0.03426215591077924, -1.5707989815295977)
+pallet GT before: (3.4499999999811473, -4.000000002563728, 0.03422333719249366, -7.959792077485326e-17)
+[INFO] [1781279982.885390349] [gazebo_backend]: [GazeboBackend] pick pallet_1 (physics)
+[INFO] [1781279983.081075080] [gazebo_backend]: pick: already 2.00 m from pallet (≤2.0) — skipping Nav2 approach, servo only
+[INFO] [1781279984.200153153] [gazebo_backend]: servo_dock[drive]: dist=2.000 m bearing=0.0° cmd=(0.12, 0.00)
+[INFO] [1781279986.508697546] [gazebo_backend]: servo_dock[drive]: dist=1.747 m bearing=0.0° cmd=(0.12, 0.00)
+[INFO] [1781279988.648876331] [gazebo_backend]: servo_dock[drive]: dist=1.502 m bearing=0.0° cmd=(0.12, 0.00)
+[INFO] [1781279990.790174396] [gazebo_backend]: servo_dock[drive]: dist=1.262 m bearing=0.0° cmd=(0.12, 0.00)
+[INFO] [1781279993.006319762] [gazebo_backend]: servo_dock[drive]: dist=1.020 m bearing=0.0° cmd=(0.12, 0.00)
+[INFO] [1781279995.167003049] [gazebo_backend]: servo_dock[drive]: dist=0.779 m bearing=0.0° cmd=(0.12, 0.00)
+[INFO] [1781279995.945577294] [gazebo_backend]: servo_dock: DOCKED dist=0.711 m bearing=0.0°
+[INFO] [1781279997.465551245] [gazebo_backend]: pick lift: pallet z 0.034→0.199 (+0.165) after 1.1 s
+[INFO] [1781280007.563576434] [gazebo_backend]: pick verify: d_pallet=(0.000,0.469) d_robot=(-0.000,0.469) delta_robot=0.469 pallet_z_rev=0.202 pallet_yaw -0.00→0.00
+[INFO] [1781280010.366110201] [gazebo_backend]: [GazeboBackend] _set_vx_max(0.25) → rc=0 stdout='Set parameter successful'
+[INFO] [1781280010.367040227] [gazebo_backend]: [GazeboBackend] pick SUCCESS — z_lifted=0.165 m, carry_err=0.000 m, delta_robot=0.469 m, carrying pallet_1
+pick() returned: True
+robot GT after: (3.4499993758793095, -2.824303789565563, 0.03426218521539844, -1.5707961145402989)
+pallet GT after: (3.4500000571917084, -3.533159998189513, 0.20242287660844802, 2.0821375824405958e-07)
+[INFO] [1781280011.715702599] [gazebo_backend]: [GazeboBackend] _set_vx_max(0.5) → rc=0 stdout='Set parameter successful'

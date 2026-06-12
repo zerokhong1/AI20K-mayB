@@ -1,0 +1,36 @@
+[INFO] [1781286978.241301192] [gazebo_backend]: [GazeboBackend] pick pallet_1 (physics)
+[INFO] [1781286978.477117536] [gazebo_backend]: [GazeboBackend] move_to (3.45, -2.80)
+[INFO] [1781287005.973775499] [gazebo_backend]: servo_dock[align]: dist=1.987 m bearing=-58.2° cmd=(0.00, -1.00)
+[INFO] [1781287008.314162472] [gazebo_backend]: servo_dock[align]: dist=2.027 m bearing=-20.8° cmd=(0.00, -0.54)
+[INFO] [1781287010.462287624] [gazebo_backend]: servo_dock[align]: dist=2.096 m bearing=-11.5° cmd=(0.00, -0.30)
+[INFO] [1781287012.752541458] [gazebo_backend]: servo_dock[drive]: dist=2.071 m bearing=-6.9° cmd=(0.05, -0.18)
+[INFO] [1781287014.994769543] [gazebo_backend]: servo_dock[drive]: dist=1.977 m bearing=-4.6° cmd=(0.12, -0.12)
+[INFO] [1781287017.301665122] [gazebo_backend]: servo_dock[drive]: dist=1.795 m bearing=-1.7° cmd=(0.12, -0.04)
+[INFO] [1781287019.464421891] [gazebo_backend]: servo_dock[drive]: dist=1.768 m bearing=5.7° cmd=(0.12, 0.15)
+[INFO] [1781287021.580724687] [gazebo_backend]: servo_dock[drive]: dist=1.762 m bearing=7.0° cmd=(0.05, 0.18)
+[INFO] [1781287023.797777294] [gazebo_backend]: servo_dock[drive]: dist=1.762 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287026.094901378] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287028.131781426] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287030.325470141] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287032.444458743] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287034.751978869] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287036.905989671] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287039.104494404] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287041.300768255] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287043.384902172] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287045.612624215] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287047.738539935] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[INFO] [1781287049.965689097] [gazebo_backend]: servo_dock[drive]: dist=1.761 m bearing=7.2° cmd=(0.05, 0.19)
+[ERROR] [1781287051.184381081] [gazebo_backend]: servo_dock: timeout
+[ERROR] [1781287051.349785334] [gazebo_backend]: pick: docking failed — aborting
+
+=== G2.3R ATTEMPT 5 ===
+pallet=pallet_1  spawn=(3.45, -4.0)  dropoff=(0.0, 0.0)
+[SETUP] teleport pallet_1 → (3.45, -4.0, 0.01): ok
+
+[M0 before pick] pallet_GT=(3.4499999999980933, -4.000000000259341, 0.012146933833884498, -1.9923397450412766e-18)  robot_GT=(3.4500002423864076, 2.150000000010945, 0.03426276970771393, -1.0915315780013035e-08)
+
+--- calling backend.pick() ---
+pick() returned: False
+[M1 after pick ] pallet_GT=(3.4499999999784827, -4.000000002926115, 0.03422333642705101, -8.12051471752479e-17)  robot_GT=(5.155007521629912, -3.5568584117019935, 0.03422428134346417, -3.0106306928640088)
+ABORT: pick FAILED — not proceeding to drop

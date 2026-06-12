@@ -7,19 +7,29 @@
            (fork plate top at fork_joint=0 is z=0.09 → 1 cm clearance)
     legs:  4x 0.05 x 0.05 x 0.10 box at (±0.175, ±0.175), center z=0.05
            → inner faces 0.30 m apart > fork plate width 0.25 m
-    mass 8 kg, mu 0.9 on deck and legs.
+    mass 2 kg (P2.5 F6, was 8 — see inertial comment), mu 0.9 on deck and legs.
 -->
 <sdf version="1.8">
   <model name="sim_pallet">
     <static>false</static>
     <link name="pallet_body">
+      <!-- P2.5 F6: mass 8.0→2.0 kg. At 8 kg the carried pallet (centre
+           ~0.70 m ahead of the drive axle at x=0) makes the forklift
+           statically infeasible: forward moment ≈ 8*0.705 + fork 2*0.665
+           + mast 3*0.325 = 7.9 kg·m > rear moment ≈ 25*0.18 + 0.6*0.25
+           = 4.65 kg·m, and the frictionless rear casters can only push.
+           DART responds by freezing the whole contact island — robot
+           commanded ±0.06–0.20 m/s moved 0.000 m in ALL DOF (probes
+           2026-06-12). At 2 kg the system is feasible; carry verified:
+           robot 0.168 m ↔ pallet 0.168 m tracking, z=0.205. Inertia
+           scaled by 2/8. -->
       <inertial>
         <pose>0 0 0.10 0 0 0</pose>
-        <mass>8.0</mass>
+        <mass>2.0</mass>
         <inertia>
-          <ixx>0.120</ixx><ixy>0</ixy><ixz>0</ixz>
-          <iyy>0.120</iyy><iyz>0</iyz>
-          <izz>0.213</izz>
+          <ixx>0.030</ixx><ixy>0</ixy><ixz>0</ixz>
+          <iyy>0.030</iyy><iyz>0</iyz>
+          <izz>0.053</izz>
         </inertia>
       </inertial>
 
