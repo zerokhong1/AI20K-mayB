@@ -34,7 +34,7 @@ bash ~/AI20K/scripts/start_tunnel.sh
 | RAM | ≥ 16 GB |
 | GPU | Khuyến nghị; không có → headless mode + fallback ground-truth |
 | Python | 3.12+ |
-| Biến môi trường | `ANTHROPIC_API_KEY` đặt trong `~/.bashrc` |
+| Biến môi trường | `LLM_PROVIDER=ollama` (ollama chạy local, không cần API key) |
 
 ---
 
@@ -66,15 +66,19 @@ source install/setup.bash
 ### 2.3 Python deps cho agent và eval
 
 ```bash
-pip install anthropic          # LLM API
+pip install ollama             # LLM local (ollama qwen2.5:7b, không cần API key)
 pip install pytest             # để chạy test suite
 ```
 
-### 2.4 API key
+### 2.4 Ollama setup (thay thế API key)
 
 ```bash
-echo 'export ANTHROPIC_API_KEY="sk-ant-..."' >> ~/.bashrc
-source ~/.bashrc
+# Cài ollama nếu chưa có
+curl -fsSL https://ollama.ai/install.sh | sh
+# Pull model (4.7 GB, chỉ cần 1 lần)
+ollama pull qwen2.5:7b
+# Verify
+ollama list   # phải thấy qwen2.5:7b
 ```
 
 ### 2.5 (Tùy chọn) Tunnel tool
@@ -347,7 +351,7 @@ AI20K/
 | Điều | Sự thật |
 |------|---------|
 | Gazebo là gì? | **Mô phỏng vật lý 3D** — không phải robot thật |
-| Agent là gì? | **Claude LLM thật** gọi tool thật, đọc kết quả ROS 2 thật |
+| Agent là gì? | **ollama qwen2.5:7b LLM thật** gọi tool thật, đọc kết quả ROS 2 thật (≠ Gemini official BTC eval) |
 | `locate_object` dùng gì? | Mặc định: **ground-truth pose từ Gazebo** (`gz_gt`). ARMBench depth detector có sẵn nhưng chưa có model weights thật — ghi rõ trong báo cáo |
 | Bảng C đánh giá điều gì? | **Sim→real pathway** — cùng interface `WorldBackend`, đổi backend từ 2D → Gazebo không sửa code agent |
 | Bảng A/B là gì? | Dữ liệu chính thức từ **Flat2DBackend** (Máy A) — Bảng C là **bonus showcase** |

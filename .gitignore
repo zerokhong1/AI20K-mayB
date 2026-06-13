@@ -18,3 +18,4 @@ colcon_ws/log
 # Secrets
 .env
 *.key
+**/.DS_Store
