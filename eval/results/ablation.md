@@ -65,4 +65,10 @@
 
 3. **Khi nào LLM >> baseline?** (a) tên object không match keyword cứng, (b) cần ask_human, (c) path fail → replan, (d) multi-object multi-dropoff. Tập task hiện tại không đủ đa dạng để phân tách — **thành thật hơn là tuyên bố chứng minh được**.
 
-4. **Bằng chứng chính thực cho LLM planning:** Gazebo eval (Bảng C) — robot thật điều hướng Nav2, AMCL, pick/carry — scripted baseline không thể viết 80 dòng để xử lý Nav2 failures, AMCL divergence, fork control.
+4. **Cập nhật trung thực:** Flat2D LLM (11/12) = scripted-naive (11/12), Δ=0 — Flat2D quá
+   đơn giản nên KHÔNG tách được lợi thế LLM. Câu cũ ("bằng chứng LLM>baseline ở Gazebo")
+   không còn đứng vững: Bảng C 0/3 (LLM cũng chưa hoàn tất end-to-end) và scripted-naive
+   CHƯA chạy trên Gazebo. ⇒ Hiện chưa có bằng chứng định lượng LLM vượt baseline trên
+   Gazebo; Flat2D chỉ cho thấy planning tương đương. Muốn claim lợi thế phải chạy
+   scripted-naive trên Gazebo (kỳ vọng fail nặng hơn do Nav2 failures, AMCL diverge,
+   fork control).

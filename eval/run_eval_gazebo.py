@@ -48,7 +48,7 @@ REPORT_OUT  = RESULTS_DIR / "report_v2.md"
 
 PALLET_SPAWN_X = -0.28
 PALLET_SPAWN_Y = -9.48
-PALLET_MODEL   = "aws_robomaker_warehouse_PalletJackB_01_001"
+PALLET_MODEL   = "aws_robomaker_warehouse_PalletJackB_01_001"  # grader reads static prop (known bug; fix in stretch #11)
 ROBOT_MODEL    = "warehouse_forklift"
 DROPOFF_A      = (0.0, 0.0)
 NAV_TOL_M      = 2.0   # robot must be within this distance of dropoff_a to count nav as succeeded
@@ -116,7 +116,8 @@ def _gz_teleport_pallet() -> bool:
 def _oracle_grade(threshold_m: float = 1.5) -> dict:
     """Query Gazebo ground-truth pose and return grading dict.
 
-    Pallet dist is NOT independent (drop() teleports pallet to dest → oracle reads it back).
+    Pallet dist reads static prop aws_robomaker_warehouse_PalletJackB_01_001 (known grader bug —
+    always at spawn -0.276,-9.482; dist to origin ≈ 9.484m fixed). Fix in stretch #11.
     Robot dist IS independent (drop() does not move the robot).
     nav_success = robot within NAV_TOL_M of dropoff_a after task completion.
     """
@@ -159,8 +160,7 @@ def _run_one_task_live(backend: GazeboBackend, task: dict) -> dict:
     metrics = run_agent(backend, goal_text=task["goal_text"])
     elapsed = round(time.time() - t0, 1)
 
-    # Brief pause so Gazebo physics settles after the final drop() teleport
-    # before we measure ground-truth pallet position.
+    # Brief pause so Gazebo physics settles before measuring ground-truth pallet position.
     time.sleep(1.0)
     oracle = _oracle_grade(task.get("threshold_m", 1.5))
     return {
@@ -253,19 +253,29 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
         )
 
     bang_c_header = f"""\
-## Bảng C — Gazebo navigation showcase (teleport-assisted){note}
+## Bảng C — Gazebo physics showcase (bonus, ngoài phạm vi official Bảng A/B){note}
 
-> **Lưu ý: Bảng C là bonus showcase — không thuộc phạm vi đo chính Bảng A/B.**
-> Backend: `WORLD_BACKEND=gazebo` · Gazebo Harmonic · AWS small_warehouse (gz_world=default)
+> Backend: `WORLD_BACKEND=gazebo` · Gazebo Harmonic · AWS small_warehouse.
+> pick/drop = PHYSICS (servo-dock + fork lift, KHÔNG teleport trong action path).
 >
-> ⚠️ **pick/drop = coordinate teleport stub** (MoveIt chưa tích hợp, planned D10+).
-> ⚠️ **Oracle KHÔNG độc lập với agent**: `drop(x,y)` gọi `gz set_pose(pallet, x, y)`;
->    oracle đọc lại đúng vị trí đó → dist=0.000 là tautology, không phải kết quả vật lý.
+> `(model: ollama qwen2.5:7b ≠ Gemini official · GT-servo dock · pallet 2kg sim-simplified · vx≤0.25 carry · map rebaked lidar-0.625 · AMCL GT-reinit F4 active)`
+>
+> **Kết quả {passes}/{total} — hai nguyên nhân tách bạch:**
+>
+> 1. **Lỗi đo (grader đọc nhầm model):** runner chấm điểm đọc `aws…PalletJackB_01_001`
+>    — prop `<static>true</static>` đứng yên ở (-0.28,-9.48). Cột *dist pallet→dropoff_a = 9.484m*
+>    là khoảng cách cố định từ spawn prop đến gốc toạ độ, KHÔNG phản ánh physics.
+>    (Fix tách sang stretch #11, pending pre-registration.)
+>
+> 2. **Chưa hoàn tất end-to-end trên task chính:** pick vật lý đã chứng minh chạy độc lập
+>    trên pallet động `pallet_1` @(3.45,-4.0): z_lift +0.162m, carry_err≈0, delta_robot=0.452m.
+>    Nhưng m1/m2/m3 nhắm pallet @(-0.28,-9.48) và transit bị AMCL diverge (F-BUG-5).
+>    Chuỗi pick→carry→deliver CHƯA chạy trọn trên 3 task được chấm.
 >
 > {nav_verdict}
 >
-> n = {total} · Pass = {passes}/{total} (teleport-assisted)
-> Nav² = robot within {NAV_TOL_M}m of dropoff_a (independent — drop() không di chuyển robot)
+> locate_object = GT registry (chưa camera/ARMBench). n = {total} · Pass = {passes}/{total}.
+> Nav² = robot within {NAV_TOL_M}m of dropoff_a (independent metric)
 > Run: {run_ts}
 
 | Task ID | goal_text (tóm tắt) | Steps | Time (s) | Nav² robot→dropoff_a | Dist pallet→dropoff_a¹ | locate_object source |
@@ -295,10 +305,10 @@ def _write_report(rows: list[dict], run_ts: str, dry_run: bool) -> None:
 
     disclosure = """\
 
-> ¹ Dist pallet→dropoff_a đo bằng `gz model -p` ngay sau `drop()` — **không phải** metric
-> độc lập; giá trị này luôn = 0 vì drop() teleport pallet tới đúng đích trước khi oracle đọc.
-> ² Robot→dropoff_a = `gz model -p warehouse_forklift` sau khi run_agent() trả về —
-> **độc lập thật**: drop() chỉ teleport pallet, không di chuyển robot. Nav✓ = robot < {nav_tol_m}m.
+> ¹ Dist pallet→dropoff_a: đo static prop `aws_robomaker_warehouse_PalletJackB_01_001` —
+> khoảng cách cố định ≈9.484m từ spawn đến origin. KHÔNG phản ánh physics pallet (known grader bug).
+> ² Robot→dropoff_a = `gz model -p warehouse_forklift` — **độc lập thật**: robot chưa đến
+> dropoff_a sau task. Nav✓ = robot < {nav_tol_m}m.
 >
 > **Audit trail**: `eval/results/traces/` chứa full tool-call sequences cho mỗi run.
 > Cột *locate_object source*: **GT registry** = dict toạ độ tĩnh `_WORLD_OBJECTS` (không sensor).

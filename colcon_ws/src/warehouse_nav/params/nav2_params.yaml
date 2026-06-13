@@ -337,7 +337,7 @@ collision_monitor:
     transform_tolerance: 0.2
     source_timeout: 1.0
     base_shift_correction: True
-    stop_pub_timeout: 2.0
+    stop_pub_timeout: 0.5
     polygons: ["FootprintApproach"]
     FootprintApproach:
       type: "polygon"

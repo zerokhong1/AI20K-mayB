@@ -82,11 +82,13 @@ def run_task(task: dict, run_ts: str, seed: int) -> dict:
         "category":   task.get("category", "—"),
         "goal_short": goal_text[:55] + "…",
         "success":    success,
+        "done_called": result.get("done_called", False),
         "steps":      result.get("steps", 0),
         "time_s":     elapsed,
         "dist_m":     dist,
         "locate_src": locate_src,
         "oracle_target": task.get("oracle_target", "dropoff_a"),
+        "oracle":     oracle,
         "error":      result.get("error", None),
     }
 

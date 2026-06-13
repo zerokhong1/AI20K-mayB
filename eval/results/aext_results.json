@@ -14,7 +14,13 @@
       "dist_m": 0.0,
       "locate_src": "gt_registry",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     },
     {
       "task_id": "a2",
@@ -26,7 +32,13 @@
       "dist_m": 0.0,
       "locate_src": "—",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     },
     {
       "task_id": "a3",
@@ -38,7 +50,13 @@
       "dist_m": 0.0,
       "locate_src": "gt_registry",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     },
     {
       "task_id": "a4",
@@ -50,7 +68,13 @@
       "dist_m": 0.0,
       "locate_src": "—",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     },
     {
       "task_id": "a5",
@@ -62,7 +86,13 @@
       "dist_m": 0.0,
       "locate_src": "gt_registry",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     },
     {
       "task_id": "a6",
@@ -74,7 +104,13 @@
       "dist_m": 0.0,
       "locate_src": "gt_registry",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     },
     {
       "task_id": "a7",
@@ -86,7 +122,13 @@
       "dist_m": 0.0,
       "locate_src": "gt_registry",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     },
     {
       "task_id": "a8",
@@ -98,7 +140,13 @@
       "dist_m": 0.0,
       "locate_src": "gt_registry",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     },
     {
       "task_id": "a9",
@@ -110,7 +158,13 @@
       "dist_m": 0.0,
       "locate_src": "gt_registry",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     },
     {
       "task_id": "a10",
@@ -122,7 +176,13 @@
       "dist_m": 4.065,
       "locate_src": "—",
       "oracle_target": "dropoff_b",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 4.065,
+        "task_complete": false
+      }
     },
     {
       "task_id": "a11",
@@ -134,7 +194,13 @@
       "dist_m": 0.0,
       "locate_src": "gt_registry",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     },
     {
       "task_id": "a12",
@@ -146,7 +212,13 @@
       "dist_m": 0.0,
       "locate_src": "gt_registry",
       "oracle_target": "dropoff_a",
-      "error": null
+      "error": null,
+      "done_called": true,
+      "oracle": {
+        "backend": "flat2d",
+        "pallet_to_dropoff_a_m": 0.0,
+        "task_complete": true
+      }
     }
   ]
 }

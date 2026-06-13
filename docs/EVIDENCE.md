@@ -22,7 +22,7 @@
 | 8 | Carry trace — z_lift max (FINAL PASS) | 0.211 m | attempt 13 · F4 ON · GT-drive transit | commit `bc38da6` (`carry_trace_20260613_023902.jsonl`) | `python3 -c "import json; lines=[json.loads(l) for l in open('eval/results/traces/carry_trace_20260613_023902.jsonl') if l.strip()]; print('z_max=', max(l['z'] for l in lines if 'z' in l))"` |
 | 9 | AMCL divergence (SỐ XẤU — vào index) | 2.9 m | aisle pallet (-0.28,-9.48) · không GT-reinit | commit `fb857c2` (attempt 3, transit FAIL) | xem `eval/results/traces/g23r_attempt5.log` dòng `diverge` |
 | 10 | SLAM map rebake — lidar offset fix | lidar @ 0.625 m | map TF mismatch cũ vs mới | commit `110c851` (G2.6a: rebake SLAM map) | `ros2 topic echo /map --once` (confirm map frame=map) |
-| 11 | Bảng C Gazebo — P4 eval (physics pick) | 0/3 PASS · 0/3 Nav² | ollama qwen2.5:7b · GT-registry · collision_monitor stall F-BUG-5 · AMCL GT-reinit | commit post-`27427ae`, `eval/results/report_v2.md §Bảng C` | `source colcon_ws/install/setup.bash && LLM_PROVIDER=ollama python3 eval/run_eval_gazebo.py` |
+| 11 | Bảng C Gazebo — P4 eval (physics pick) | 0/3 PASS · 0/3 Nav² _(run cũ)_ | ollama qwen2.5:7b · GT-registry · code fixes P4.1b đã apply (chưa re-run) | commit post-`27427ae` (run cũ), fixes tại commit hiện tại | `source colcon_ws/install/setup.bash && LLM_PROVIDER=ollama python3 eval/run_eval_gazebo.py` |
 | 11b | G2.3R FINAL PASS (bc38da6) — pick SUCCESS | z_lift=0.211m · carry_err=0.026m | attempt 13 · F4 ON · GT-drive transit | commit `bc38da6`, `eval/results/traces/carry_trace_20260613_023902.jsonl` | xem `eval/results/traces/g23r_attempt6.log` |
 | 12 | Bảng A-ext — LLM agent (ollama) | 11/12 tasks PASS | ollama qwen2.5:7b · Flat2DBackend · T=0 · seed=20260613 | commit post-`ff9be67`, `eval/results/report_v2.md §Bảng A-ext` | `LLM_PROVIDER=ollama python3 eval/run_eval_aext.py` |
 | 13 | Ablation — LLM vs scripted-naive | LLM 11/12 · baseline 11/12 · Δsteps=−0.17 | Flat2DBackend · task quá đơn giản (honest) | `eval/results/ablation.md`, `eval/results/ablation_baseline_results.json` | `python3 eval/ablation_baseline.py && LLM_PROVIDER=ollama python3 eval/run_eval_aext.py` |
@@ -58,11 +58,17 @@
 **Cách bắt:** `lidar_height_bug` — lidar được gắn tại 0.625 m nhưng map được bake với lidar ở độ cao khác → scan không match map.
 **Commit fix:** `110c851` ("G2.6a: rebake SLAM map (lidar@0.625m) + map arg + drive/validate scripts")
 
-### F-BUG-5: Reverse block do cmd_vel tranh chấp (collision_monitor)
+### F-BUG-5: cmd_vel tranh chấp giữa collision_monitor và servo_dock/drive_timed
 
 **Triệu chứng:** Robot không thể tiến gần pallet (dist giữ nguyên 0.973 m). servo_dock timeout liên tục. Logs: `STALL: moved only 0.000 m in 2s`.
-**Cách bắt:** Xem `collision_monitor_state` topic — collision_monitor chặn cmd_vel khi robot tiếp cận kệ hàng. Nguyên nhân: costmap inflation + narrow aisle.
-**Status:** Workaround = AMCL GT-reinit (F4) + slow approach. Không fix hoàn toàn trong Pha 2.
+**Cách bắt:** `collision_monitor` output topic = `/cmd_vel` (giống servo_dock). Sau khi Nav2 stop, `stop_pub_timeout: 2.0 s` khiến collision_monitor tiếp tục publish zero-Twist lên `/cmd_vel` trong 2 giây — lấn át servo_dock (5 Hz) và `_drive_timed` (25 Hz).
+**Fix (P4.1b, commit hiện tại):**
+  1. `nav2_params.yaml`: giảm `stop_pub_timeout: 2.0 → 0.5` — rút ngắn cửa sổ zero-pub.
+  2. `pick()`: tăng pre-servo wait từ 1.0 s → 2.5 s để stop_pub_timeout hết hạn trước khi servo_dock bắt đầu.
+  3. `_servo_dock()`: re-publish twist ở 25 Hz trong khoảng chờ GT-read (thay vì sleep) — giữ lệnh motion wins last-message race.
+  4. `pick()`: thêm proactive AMCL GT-reinit trước Nav2 approach (đối xứng với `drop()`) để giảm AMCL drift vào aisle y≈-9.
+  5. `pick()`: GT-drive fallback (`_gt_drive_to_pose`) khi retry approach thất bại — tương tự `drop()`.
+**Status:** Code fixed. Re-run Gazebo eval cần thiết để có số mới.
 
 ---
 
